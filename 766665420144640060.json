@@ -1,0 +1,8 @@
+{
+  "prefix": "v!",
+  "logging": {
+    "enabled": false,
+    "logChannelId": null,
+    "actionsLogged": "none"
+  }
+}
