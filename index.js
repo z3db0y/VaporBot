@@ -8,11 +8,7 @@ const GuildAPI = require('./guildAPI');
 const guildAPI = new GuildAPI.GuildAPI();
 const activeVCs = new Map();
 const vcConnectionMap = new Map();
-const ytdl = require('ytdl-core');
 const { exit } = require('process');
-const MusicBotAPI = require('./musicBotAPI');
-const mbotapi = new MusicBotAPI.MusicBotAPI();
-const ytsr = require('youtube-search');
 
 client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
