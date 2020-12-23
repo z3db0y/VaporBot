@@ -13,8 +13,15 @@ class RainbowRole {
     async runRainbowRole(discordClient, guildID) {
         setIntrerval(10, function () {
             let guildSettings = getGuild(guildID);
-            if(!guildSettings.rainbowRoles.isEmpty()) {
-            
+            if(guildSettings.rainbowRoles.length() > 0) {
+                for(int i; i<guildSettings.rainbowRoles; i++) {
+                    var frequency = .3;
+                    for (var i = 0; i < 32; ++i) {
+                        red   = Math.sin(frequency*i + 0) * 127 + 128;
+                        green = Math.sin(frequency*i + 2) * 127 + 128;
+                        blue  = Math.sin(frequency*i + 4) * 127 + 128;
+                    }
+                }
             }
         });
     }
