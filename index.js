@@ -16,7 +16,7 @@ const { exit } = require('process');
 
 client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
-    client.user.setPresence({activity: {type: "PLAYING",name: "vapor | TEST MODE"}, status: 'dnd', afk: false});
+    client.user.setPresence({activity: {type: "PLAYING",name: "vapor | v!help"}, status: 'online', afk: false});
     console.log('\x1b[35m[Discord]\x1b[0m Set custom status!')
     client.guilds.cache.forEach((guild) => {
         guildAPI.initialiseGuild(guild);
