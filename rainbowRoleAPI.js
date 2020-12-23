@@ -14,9 +14,9 @@ class RainbowRole {
         setIntrerval(10, function () {
             let guildSettings = getGuild(guildID);
             if(guildSettings.rainbowRoles.length() > 0) {
-                for(var i; i<guildSettings.rainbowRoles; i++) {
+                for(var i = 0; i < 32; ++i) {
                     var frequency = 0.3;
-                    for (var i = 0; i < 32; ++i) {
+                    for (var i1 = 0; i1 < guildSettings.rainbowRoles.length(); i++) {
                         red   = Math.sin(frequency*i + 0) * 127 + 128;
                         green = Math.sin(frequency*i + 2) * 127 + 128;
                         blue  = Math.sin(frequency*i + 4) * 127 + 128;
