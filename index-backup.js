@@ -1,5 +1,7 @@
 'use strict';
 
+const BOT_CHANNEL = "";
+
 require('dotenv').config();
 const Discord = require('discord.js');
 const client = new Discord.Client();
