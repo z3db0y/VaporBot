@@ -1,5 +1,6 @@
 'use strict';
 
+require('dotenv').config();
 const Discord = require('discord.js');
 const client = new Discord.Client();
 const fs = require('fs');
@@ -11,10 +12,11 @@ const ytdl = require('ytdl-core');
 const { exit } = require('process');
 const MusicBotAPI = require('./musicBotAPI');
 const mbotapi = new MusicBotAPI.MusicBotAPI();
+const ytsr = require('youtube-search');
 
 client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
-    client.user.setPresence({activity: {type: "PLAYING",name: "vapor | Default: v!help"}, status: 'idle', afk: false});
+    client.user.setPresence({activity: {type: "PLAYING",name: "vapor | TEST MODE"}, status: 'dnd', afk: false});
     console.log('\x1b[35m[Discord]\x1b[0m Set custom status!')
     client.guilds.cache.forEach((guild) => {
         guildAPI.initialiseGuild(guild);
@@ -72,18 +74,6 @@ client.on('message', (msg) => {
                 {
                     name: prefix + "setprefix",
                     value: "Update the guild's prefix."
-                },
-                {
-                    name: prefix + "join",
-                    value: "*[*Alpha*]* Make bot join your voice channel."
-                },
-                {
-                    name: prefix + "dc | " + prefix + "disconnect",
-                    value: "*[*Alpha*]* Make bot leave your voice channel."
-                },
-                {
-                    name: prefix + "play",
-                    value: "*[*Not supported yet*]* Add a song to the music queue."
                 }
             ],
             timestamp: new Date()
@@ -180,45 +170,13 @@ client.on('message', (msg) => {
          }
        }) .catch((err) => {msg.channel.send('Operation timed out.')});
     }
-    else if (msg.content.toLowerCase().startsWith(prefix + 'join')) {
-      if(msg.member.voice.channel == null) {
-        msg.channel.send("Join a voice channel, then try again!");
-      }
-      else {
-        if(!msg.member.voice.channel.permissionsFor(client.user).has('CONNECT') || !msg.member.voice.channel.permissionsFor(client.user).has('SPEAK')) {
-          msg.channel.send("I don't have permission to join your voice channel!");
-        }
-        else {
-          msg.member.voice.channel.join() .then((connection) => {
-            vcConnectionMap.set(msg.guild.id, connection);
-          });
-          msg.channel.send("Joined VC!");
-        }
-      }
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'dc') || msg.content.toLowerCase().startsWith(prefix + 'disconnect')) {
-      if(vcConnectionMap.has(msg.guild.id)) {
-        vcConnectionMap.get(msg.guild.id).disconnect();
-        vcConnectionMap.delete(msg.guild.id);
-        msg.channel.send("Left VC!");
-      }
-      else {
-        msg.channel.send("I am not in a voice channel!");
-      }
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'play')) {
-      
+    else if (msg.content.toLowerCase().startsWith(prefix + 'setwarns')) {
+      let guildData = JSON.parse(fs.readFileSync(filename));
     }
 });
 
 
-process.on('exit', () => {
-    mbotapi.disconnectFromAllVCs(vcConnectionMap);
-});
-process.on('SIGINT', () => {
-    exit();
-});
 
 
 
-client.login(JSON.parse(fs.readFileSync("../../../private/environment.json")).token);
+client.login(JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).token);
