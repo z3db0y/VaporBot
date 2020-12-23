@@ -13,6 +13,9 @@ class RainbowRole {
     async runRainbowRole(discordClient, guildID) {
         setIntrerval(10, function () {
             let guildSettings = getGuild(guildID);
+            if(!guildSettings.rainbowRoles.isEmpty()) {
+            
+            }
         });
     }
 }
