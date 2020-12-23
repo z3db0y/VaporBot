@@ -1,6 +1,8 @@
 'use strict';
 
-const BOT_CHANNEL = "";
+let botChannels = { "BETA":0, "STABLE":1 };
+
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -176,5 +178,8 @@ client.on('message', (msg) => {
 
 
 
-
-client.login(JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).token);
+if (BOT_CHANNEL == 0) {
+    client.login(JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).betaToken);
+} else if (BOT_CHANNEL == 1) {
+    client.login(JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).token);
+}
