@@ -12,7 +12,7 @@ class RainbowRole {
 
     async runRainbowRole(discordClient, guildID) {
         setIntrerval(10, function () {
-            getGuild(guildID);
+            let guildSettings = getGuild(guildID);
         });
     }
 }
