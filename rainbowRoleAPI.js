@@ -41,3 +41,5 @@ class RainbowRole {
         return red+green+blue;
     };
 }
+
+module.export
