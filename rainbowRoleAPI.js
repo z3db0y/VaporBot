@@ -42,4 +42,4 @@ class RainbowRole {
     };
 }
 
-module.export
+module.exports = { RainbowRole.runRainbowRole }
