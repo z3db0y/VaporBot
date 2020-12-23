@@ -20,6 +20,9 @@ class RainbowRole {
                         red   = Math.sin(frequency*i + 0) * 127 + 128;
                         green = Math.sin(frequency*i + 2) * 127 + 128;
                         blue  = Math.sin(frequency*i + 4) * 127 + 128;
+
+                        var color = '0x'+fullColorHex(red,green,blue);
+                        discordClient.guilds.cache.find(guild => guild.id === guildID).roles.cache.find(role => role.id === guildSettings.rainbowRoles[i]).setColor(color);
                     }
                 }
             }
