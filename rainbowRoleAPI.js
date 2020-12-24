@@ -18,7 +18,7 @@ class RainbowRole {
                     initiated = 1;
                 } else {
                 }
-                if(guildSettings.rainbowRoles.length() > 0) {
+                if(guildSettings.rainbowRoles.length > 0) {
                     for(var i = 0; i < 32; ++i) {
                         var frequency = 0.3;
                         for (var i1 = 0; i1 < guildSettings.rainbowRoles.length(); i++) {
