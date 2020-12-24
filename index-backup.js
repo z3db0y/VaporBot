@@ -177,6 +177,7 @@ client.on('message', (msg) => {
       }
       if(msg.content.length < prefix.length+) {
         msg.channel.send('Invalid usage! Use: ' + prefix + 'rainbowrole <ROLE>');
+        return;
       }
     }
 });
