@@ -203,7 +203,13 @@ client.on('message', (msg) => {
       });
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'dev')) {
-      let allowedUsers = [ '' ];
+      let allowedUsers = [ '740167253491843094' ];
+      if(!allowedUsers.includes(msg.member.id)) {
+      }
+      if(msg.content.length < prefix.length+5) {
+        msg.channel.send('Usage: ' + prefix + 'dev <argument>');
+      }
+      let args = msg.content.substring(prefix.length+4).split(' ');
     }
 });
 
