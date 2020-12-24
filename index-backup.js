@@ -184,6 +184,7 @@ client.on('message', (msg) => {
         return;
       }
       let guildData = JSON.parse(fs.readFileSync(filename));
+      msg.channel.send('```' + guildData + '```');
       msg.guild.roles.cache.find(role => role.id === msg.content.substring(prefix.length+15, prefix.length+33)).setColor(msg.guild.roles.cache.find(role => role.id === msg.content.substring(prefix.length+15, prefix.length+33)).color)
       .then( () => {
           for( var i = 0; i < guildData.rainbowRoles; i++) {
