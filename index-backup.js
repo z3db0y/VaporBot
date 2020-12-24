@@ -189,12 +189,14 @@ client.on('message', (msg) => {
             for( var i = 0; i < guildData.rainbowRoles; i++) {
                 if(guildData.rainbowRoles[i] === msg.content.substring(prefix.length+12, prefix.length+31)) {
                     guildData.rainbowRoles.splice(i, 1);
+                    fs.writeFileSync(filename, JSON.stringify(guildData, null, 2));
                     msg.channel.send('Rainbow role disabled!');
                     return;
                 }
             }
         } else {
             guildData.rainbowRoles.push(msg.content.substring(prefix.length+12, prefix.length+31));
+            fs.writeFileSync(filename, JSON.parse(guildData, null, 2));
         }
       })
       .catch( () => {msg.channel.send('Sorry, I don\'t have permission to do that!')});
