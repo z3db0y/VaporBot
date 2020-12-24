@@ -183,7 +183,7 @@ client.on('message', (msg) => {
         msg.channel.send('Invalid usage! Use: ' + prefix + 'rainbowrole <ROLE>');
         return;
       }
-      concole.log(`\x1b[35m[Debug] \x1b[33mI saw ${msg.content.substring(prefix.length+12, prefix.length+31)}!`);
+      console.log(`\x1b[35m[Debug] \x1b[33mI saw ${msg.content.substring(prefix.length+12, prefix.length+31)}!`);
       let guildData = JSON.parse(fs.readFileSync(filename));
       msg.guild.roles.cache.find(role => role.id === msg.content.substring(prefix.length+12, prefix.length+31)).setColor(msg.guild.roles.find(role => role.id === msg.content.substring(prefix.length+12, prefix.length+31)).color)
       .then( () => {
