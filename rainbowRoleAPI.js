@@ -19,17 +19,11 @@ class RainbowRole {
                 } else {
                 }
                 if(guildSettings.rainbowRoles.length > 0) {
-                    for(var i = 0; i < 32; ++i) {
-                        var frequency = 0.3;
-                        for (var i1 = 0; i1 < guildSettings.rainbowRoles.length; i++) {
-                            red   = Math.sin(frequency*i + 0) * 127 + 128;
-                            green = Math.sin(frequency*i + 2) * 127 + 128;
-                            blue  = Math.sin(frequency*i + 4) * 127 + 128;
-
-                            var color = '0x'+fullColorHex(red,green,blue);
-                            discordClient.guilds.cache.find(guild => guild.id === guildID).roles.cache.find(role => role.id === guildSettings.rainbowRoles[i]).setColor(color);
-                            console.log(`\x1b[35m[RainbowRole] \x1b[0m Changed role \x1b[32m${guildSettings.rainbowRoles[i]}\x1b[0m's color to \x1b[32m${color}\x1b[0m!`);
-                        }
+                    var frequency = 0.3;
+                    for (var i1 = 0; i1 < guildSettings.rainbowRoles.length; i++) {
+                        
+                        var color = '0x'+fullColorHex(255,0,0);
+                        discordClient.guilds.cache.find(guild => guild.id === guildID).roles.cache.find(role => role.id === guildSettings.rainbowRoles[i]).setColor(color);
                     }
                 }
             } catch (err) {
