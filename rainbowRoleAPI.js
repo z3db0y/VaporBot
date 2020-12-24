@@ -12,7 +12,7 @@ class RainbowRole {
             try {
                 let guildFileName = guildID + ".json";
                 guildSettings = JSON.parse(fs.readFileSync(guildFileName));
-                console.log(`\x1b[35m[RainbowRole] \x1b[0mInitiated rainbow role API for \x1b[32m${discordClient.guilds.find(guild => guild.id === guildID).name}\x1b[0m!`);
+                console.log(`\x1b[35m[RainbowRole] \x1b[0mInitiated rainbow role API for \x1b[32m${discordClient.guilds.cache.find(guild => guild.id === guildID).name}\x1b[0m!`);
                 if(guildSettings.rainbowRoles.length() > 0) {
                     for(var i = 0; i < 32; ++i) {
                         var frequency = 0.3;
