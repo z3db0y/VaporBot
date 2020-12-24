@@ -30,7 +30,7 @@ class RainbowRole {
                     }
                 }
             } catch (err) {
-                console.log(`\x1b[35m[RainbowRole]\x1b[33m` + err.message + `\x1b[0m`);
+                console.log(`\x1b[35m[RainbowRole] \x1b[31m` + err.message + `\x1b[0m`);
             }
         }, 1);
     }
