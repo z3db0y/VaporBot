@@ -13,7 +13,8 @@ const guildAPI = new GuildAPI.GuildAPI();
 const activeVCs = new Map();
 const vcConnectionMap = new Map();
 const { exit } = require('process');
-const RainbowRoleAPI = require('./rainbowRoleAPI').RainbowRole;
+const RainbowRoleAPI = require('./rainbowRoleAPI');
+const rainbowRoleAPI = new RainbowRoleAPI.RainbowRole();
 
 client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
@@ -21,7 +22,7 @@ client.on('ready', () => {
     console.log('\x1b[35m[Discord]\x1b[0m Set custom status!')
     client.guilds.cache.forEach((guild) => {
         guildAPI.initialiseGuild(guild);
-        RainbowRoleAPI.runRainbowRole(client, guild.id);
+        rainbowRoleAPI.runRainbowRole(client, guild.id);
     });
 });
 
@@ -32,7 +33,7 @@ client.on('guildDelete', (guild) => {
 client.on('guildCreate', (guild) => {
     console.log(`\x1b[35m[GuildManager]\x1b[0m I have been added to \x1b[32m${guild.name}\x1b[0m!`);
     guildAPI.initialiseGuild(guild);
-    RainbowRoleAPI.runRainbowRole(client, guild.id);
+    rainbowRoleAPI.runRainbowRole(client, guild.id);
 });
 
 client.on('message', (msg) => {
