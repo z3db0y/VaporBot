@@ -28,6 +28,7 @@ class RainbowRole {
 
                             var color = '0x'+fullColorHex(red,green,blue);
                             discordClient.guilds.cache.find(guild => guild.id === guildID).roles.cache.find(role => role.id === guildSettings.rainbowRoles[i]).setColor(color);
+                            console.log(`\x1b[35m[RainbowRole] \x1b[0m Changed role \x1b[32m${guildSettings.rainbowRoles[i]}\x1b[0m's color to \x1b[32m${color}\x1b[0m!`);
                         }
                     }
                 }
