@@ -179,17 +179,17 @@ client.on('message', (msg) => {
         msg.channel.send('Sorry, but you need admin perms to use this amazing feature!');
         return;
       }
-      if(msg.content.length < prefix.length+31) {
+      if(msg.content.length < prefix.length+33) {
         msg.channel.send('Invalid usage! Use: ' + prefix + 'rainbowrole <ROLE>');
         return;
       }
-      console.log(`\x1b[35m[Debug] \x1b[33mI saw ${msg.content.substring(prefix.length+12, prefix.length+31)}!`);
+      console.log(`\x1b[35m[Debug] \x1b[33mI saw ${msg.content.substring(prefix.length+15, prefix.length+33)}!`);
       let guildData = JSON.parse(fs.readFileSync(filename));
-      msg.guild.roles.cache.find(role => role.id === msg.content.substring(prefix.length+12, prefix.length+31)).setColor(msg.guild.roles.find(role => role.id === msg.content.substring(prefix.length+12, prefix.length+31)).color)
+      msg.guild.roles.cache.find(role => role.id === msg.content.substring(prefix.length+15, prefix.length+33)).setColor(msg.guild.roles.find(role => role.id === msg.content.substring(prefix.length+15, prefix.length+33)).color)
       .then( () => {
-        if(guildData.rainbowRoles.contains(msg.content.substring(prefix.length+12, prefix.length+31))) {
+        if(guildData.rainbowRoles.contains(msg.content.substring(prefix.length+15, prefix.length+33))) {
             for( var i = 0; i < guildData.rainbowRoles; i++) {
-                if(guildData.rainbowRoles[i] === msg.content.substring(prefix.length+12, prefix.length+31)) {
+                if(guildData.rainbowRoles[i] === msg.content.substring(prefix.length+15, prefix.length+33)) {
                     guildData.rainbowRoles.splice(i, 1);
                     fs.writeFileSync(filename, JSON.stringify(guildData, null, 2));
                     msg.channel.send('Rainbow role disabled!');
@@ -197,7 +197,7 @@ client.on('message', (msg) => {
                 }
             }
         } else {
-            guildData.rainbowRoles.push(msg.content.substring(prefix.length+12, prefix.length+31));
+            guildData.rainbowRoles.push(msg.content.substring(prefix.length+15, prefix.length+33));
             fs.writeFileSync(filename, JSON.parse(guildData, null, 2));
         }
       })
