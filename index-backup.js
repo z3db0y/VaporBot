@@ -202,6 +202,9 @@ client.on('message', (msg) => {
           msg.channel.send(err.message);
       });
     }
+    else if (msg.content.toLowerCase().startsWith(prefix + 'dev')) {
+      let allowedUsers = [ '' ];
+    }
 });
 
 
