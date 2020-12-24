@@ -19,8 +19,7 @@ class RainbowRole {
                 } else {
                 }
                 if(guildSettings.rainbowRoles.length > 0) {
-                    var frequency = 0.3;
-                    for (var i1 = 0; i1 < guildSettings.rainbowRoles.length; i++) {
+                    for (var i1 = 0; i1 < guildSettings.rainbowRoles.length; i1++) {
                         setTimeout(() => {
                             var color = '0x'+fullColorHex(255,0,0);
                             discordClient.guilds.cache.find(guild => guild.id === guildID).roles.cache.find(role => role.id === guildSettings.rainbowRoles[i]).setColor(color);
