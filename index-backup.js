@@ -175,7 +175,9 @@ client.on('message', (msg) => {
         msg.channel.send('Sorry, but you need admin perms to use this amazing feature!');
         return;
       }
-      if(msg.content.length < prefix.length+)
+      if(msg.content.length < prefix.length+) {
+        msg.channel.send('Invalid usage! Use: ' + prefix + 'rainbowrole <ROLE>');
+      }
     }
 });
 
