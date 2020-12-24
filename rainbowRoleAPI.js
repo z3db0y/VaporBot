@@ -29,7 +29,7 @@ class RainbowRole {
                         }
                     }
                 }
-            }
+            } catch (err) {}
         }, 1);
     }
 
