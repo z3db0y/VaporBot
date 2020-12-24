@@ -174,7 +174,7 @@ client.on('message', (msg) => {
        }) .catch((err) => {msg.channel.send('Operation timed out.')});
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'rainbowrole')) {
-      if(!msg.member.hasPermission('ADMINISTRATOR') {
+      if(!msg.member.hasPermission('ADMINISTRATOR')) {
         msg.channel.send('Sorry, but you need admin perms to use this amazing feature!');
         return;
       }
