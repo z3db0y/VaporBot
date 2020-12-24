@@ -187,18 +187,16 @@ client.on('message', (msg) => {
       let guildData = JSON.parse(fs.readFileSync(filename));
       msg.guild.roles.cache.find(role => role.id === msg.content.substring(prefix.length+15, prefix.length+33)).setColor(msg.guild.roles.cache.find(role => role.id === msg.content.substring(prefix.length+15, prefix.length+33)).color)
       .then( () => {
-        if(guildData.rainbowRoles.contains(msg.content.substring(prefix.length+15, prefix.length+33))) {
-            for( var i = 0; i < guildData.rainbowRoles; i++) {
-                if(guildData.rainbowRoles[i] === msg.content.substring(prefix.length+15, prefix.length+33)) {
-                    guildData.rainbowRoles.splice(i, 1);
-                    fs.writeFileSync(filename, JSON.stringify(guildData, null, 2));
-                    msg.channel.send('Rainbow role disabled!');
-                    return;
-                }
-            }
-        } else {
-            guildData.rainbowRoles.push(msg.content.substring(prefix.length+15, prefix.length+33));
-            fs.writeFileSync(filename, JSON.parse(guildData, null, 2));
+          for( var i = 0; i < guildData.rainbowRoles; i++) {
+              if(guildData.rainbowRoles[i] === msg.content.substring(prefix.length+15, prefix.length+33)) {
+                  guildData.rainbowRoles.splice(i, 1);
+                  fs.writeFileSync(filename, JSON.stringify(guildData, null, 2));
+                  msg.channel.send('Rainbow role disabled!');
+                  return;
+              }
+          }
+          guildData.rainbowRoles.push(msg.content.substring(prefix.length+15, prefix.length+33));
+          fs.writeFileSync(filename, JSON.parse(guildData, null, 2));
         }
       })
       .catch( (err) => {
