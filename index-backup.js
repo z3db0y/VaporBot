@@ -188,11 +188,13 @@ client.on('message', (msg) => {
         if(guildData.rainbowRoles.contains(msg.content.substring(prefix.length+12, prefix.length+31))) {
             for( var i = 0; i < guildData.rainbowRoles; i++) {
                 if(guildData.rainbowRoles[i] === msg.content.substring(prefix.length+12, prefix.length+31)) {
-                    
+                    guildData.rainbowRoles.splice(i, 1);
+                    msg.channel.send('Rainbow role disabled!');
+                    return;
                 }
             }
         } else {
-            
+            guildData.rainbowRoles.push(msg.content.substring(prefix.length+12, prefix.length+31));
         }
       })
       .catch( () => {msg.channel.send('Sorry, I don\'t have permission to do that!')});
