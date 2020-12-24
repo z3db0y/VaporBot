@@ -13,7 +13,7 @@ const guildAPI = new GuildAPI.GuildAPI();
 const activeVCs = new Map();
 const vcConnectionMap = new Map();
 const { exit } = require('process');
-const RainbowRoleAPI = require('./rainbowRoleAPI');
+const RainbowRoleAPI = require('./rainbowRoleAPI').RainbowRole;
 
 client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
