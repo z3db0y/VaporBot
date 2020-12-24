@@ -210,7 +210,7 @@ client.on('message', (msg) => {
         msg.channel.send('Usage: ' + prefix + 'dev <argument>');
       }
       let args = msg.content.toLowerCase().substring(prefix.length+4).split(' ');
-      switch(args) {
+      switch(args[0]) {
         case 'guildsettings':
           msg.channel.send('```' + fs.readFileSync(filename) + '```');
           break;
