@@ -12,7 +12,11 @@ class RainbowRole {
 
     async runRainbowRole(discordClient, guildID) {
         setIntrerval(10, function () {
-            let guildSettings = getGuild(guildID);
+            try {
+                let guildSettings = getGuild(guildID);
+            } catch (err) {
+                return;
+            }
             if(guildSettings.rainbowRoles.length() > 0) {
                 for(var i = 0; i < 32; ++i) {
                     var frequency = 0.3;
