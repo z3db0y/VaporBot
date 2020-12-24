@@ -195,7 +195,7 @@ client.on('message', (msg) => {
                   return;
               }
           }
-          guildData.rainbowRoles.add(msg.content.substring(prefix.length+15, prefix.length+33));
+          guildData.rainbowRoles.push(msg.content.substring(prefix.length+15, prefix.length+33));
           fs.writeFileSync(filename, JSON.parse(guildData, null, 2));
       })
       .catch( (err) => {
