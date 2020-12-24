@@ -16,7 +16,6 @@ class RainbowRole {
                 let guildSettings = getGuild(guildID);
                 console.log(`\x1b[35m[RainbowRole] \x1b[0mInitiated rainbow role API for \x1b[32m${discordClient.guilds.find(guild => guild.id === guildID).name}\x1b[0m!`);
             } catch (err) {
-                return;
             }
             if(guildSettings.rainbowRoles.length() > 0) {
                 for(var i = 0; i < 32; ++i) {
