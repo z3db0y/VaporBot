@@ -214,6 +214,8 @@ client.on('message', (msg) => {
         case 'guildsettings':
           msg.channel.send('```' + fs.readFileSync(filename) + '```');
           break;
+        default:
+          msg.channel.send('Usage: ' + prefix + 'dev <argument>');
       }
     }
 });
