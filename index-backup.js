@@ -197,7 +197,6 @@ client.on('message', (msg) => {
           }
           guildData.rainbowRoles.push(msg.content.substring(prefix.length+15, prefix.length+33));
           fs.writeFileSync(filename, JSON.parse(guildData, null, 2));
-        }
       })
       .catch( (err) => {
           msg.channel.send('Sorry, I don\'t have permission to do that!');
