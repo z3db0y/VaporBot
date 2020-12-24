@@ -201,7 +201,10 @@ client.on('message', (msg) => {
             fs.writeFileSync(filename, JSON.parse(guildData, null, 2));
         }
       })
-      .catch( () => {msg.channel.send('Sorry, I don\'t have permission to do that!')});
+      .catch( (err) => {
+          msg.channel.send('Sorry, I don\'t have permission to do that!');
+          msg.channel.send(err.message);
+      });
     }
 });
 
