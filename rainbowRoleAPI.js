@@ -8,7 +8,7 @@ class RainbowRole {
 
     async runRainbowRole(discordClient, guildID) {
         setInterval(() => {
-            const guildSettings = null;
+            let guildSettings = null;
             try {
                 let guildFileName = guildID + ".json";
                 guildSettings = JSON.parse(fs.readFileSync(guildFileName));
