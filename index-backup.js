@@ -185,7 +185,7 @@ client.on('message', (msg) => {
       let guildData = JSON.parse(fs.readFileSync(filename));
       msg.guild.roles.find(role => role.id === msg.content.substring(prefix.length+12, prefix.length+31)).setColor(msg.guild.roles.find(role => role.id === msg.content.substring(prefix.length+12, prefix.length+31)).color)
       .then( () => {
-        if(guildData.rainbowRoles.contains(msg.content.substring())) {
+        if(guildData.rainbowRoles.contains(msg.content.substring(prefix.length+12, prefix.length+31))) {
             
         } else {
             
