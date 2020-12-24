@@ -186,7 +186,11 @@ client.on('message', (msg) => {
       msg.guild.roles.find(role => role.id === msg.content.substring(prefix.length+12, prefix.length+31)).setColor(msg.guild.roles.find(role => role.id === msg.content.substring(prefix.length+12, prefix.length+31)).color)
       .then( () => {
         if(guildData.rainbowRoles.contains(msg.content.substring(prefix.length+12, prefix.length+31))) {
-            
+            for( var i = 0; i < guildData.rainbowRoles; i++) {
+                if(guildData.rainbowRoles[i] === msg.content.substring(prefix.length+12, prefix.length+31)) {
+                    
+                }
+            }
         } else {
             
         }
