@@ -184,7 +184,6 @@ client.on('message', (msg) => {
         return;
       }
       let guildData = JSON.parse(fs.readFileSync(filename));
-      msg.channel.send('```' + JSON.stringify(guildData, null, 2) + '```');
       msg.guild.roles.cache.find(role => role.id === msg.content.substring(prefix.length+15, prefix.length+33)).setColor(msg.guild.roles.cache.find(role => role.id === msg.content.substring(prefix.length+15, prefix.length+33)).color)
       .then( () => {
           for( var i = 0; i < guildData.rainbowRoles; i++) {
@@ -196,7 +195,7 @@ client.on('message', (msg) => {
               }
           }
           guildData.rainbowRoles.push(msg.content.substring(prefix.length+15, prefix.length+33));
-          fs.writeFileSync(filename, JSON.parse(guildData, null, 2));
+          fs.writeFileSync(filename, JSON.stringify(guildData, null, 2));
       })
       .catch( (err) => {
           msg.channel.send('Sorry, I don\'t have permission to do that!');
