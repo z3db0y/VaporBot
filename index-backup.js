@@ -181,8 +181,10 @@ client.on('message', (msg) => {
         return;
       }
       msg.guild.roles.find(role => role.id === msg.content.substring(prefix.length+12, prefix.length+31)).setColor(msg.guild.roles.find(role => role.id === msg.content.substring(prefix.length+12, prefix.length+31)).color)
-      .then( () => {})
-      .catch( () => {});
+      .then( () => {
+        
+      })
+      .catch( () => {msg.channel.send('Sorry, I don\'t have permission to do that!')});
     }
 });
 
