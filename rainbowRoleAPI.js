@@ -45,4 +45,4 @@ class RainbowRole {
     };
 }
 
-module.exports = { RainbowRole.runRainbowRole() }
+module.exports = { RainbowRole }
