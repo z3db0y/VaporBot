@@ -7,8 +7,8 @@ const fs = require('fs');
 class RainbowRole {
 
     async runRainbowRole(discordClient, guildID) {
+        let initiated = 0;
         setInterval(() => {
-            let initiated = 0;
             let guildSettings = null;
             try {
                 let guildFileName = guildID + ".json";
