@@ -216,7 +216,7 @@ client.on('message', (msg) => {
           msg.channel.send('```' + fs.readFileSync(filename) + '```');
           break;
         default:
-          msg.channel.send('Usage: ' + prefix + 'dev <argument>');
+          msg.channel.send('Usage: ' + prefix + 'dev <argument>');		
           break;
       }
     }
