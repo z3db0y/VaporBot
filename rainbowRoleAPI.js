@@ -26,15 +26,16 @@ class RainbowRole {
                         } else {
                             rainbowRoleID = guildSettings.rainbowRoles[i];
                         }
+                        let rainbowRole discordClient.guilds.cache.find(guild => guild.id === guildID).roles.cache.find(role => role.id == rainbowRoleID);
                         setTimeout(() => {
                             var color = '0xff0000';
-                            discordClient.guilds.cache.find(guild => guild.id === guildID).roles.cache.find(role => role.id == rainbowRoleID).setColor(color);
+                            rainbowRole.setColor(color);
                             setTimeout(() => {
                                 var color = '0x00ff00';
-                                discordClient.guilds.cache.find(guild => guild.id === guildID).roles.cache.find(role => role.id == rainbowRoleID).setColor(color);
+                                rainbowRole.setColor(color);
                                 setTimeout(() => {
                                     var color = '0x0000ff';
-                                    discordClient.guilds.cache.find(guild => guild.id === guildID).roles.cache.find(role => role.id === rainbowRoleID).setColor(color);
+                                    rainbowRole.setColor(color);
                                 }, 1000);
                             }, 1000);
                         }, 1000);
