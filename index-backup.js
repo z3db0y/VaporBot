@@ -215,6 +215,14 @@ client.on('message', (msg) => {
         case 'guildsettings':
           msg.channel.send('```' + fs.readFileSync(filename) + '```');
           break;
+        case 'add':
+          if(args.length > 1) {
+            
+          }
+          else {
+            msg.channel.send('Usage: ' + prefix + 'dev add <UserID>|<UserMention>');
+          }
+          break;
         default:
           msg.channel.send('Usage: ' + prefix + 'dev <argument>');		
           break;
