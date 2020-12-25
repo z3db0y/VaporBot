@@ -44,7 +44,7 @@ client.on('message', (msg) => {
     catch (err) {
         return;
     }
-    let botDevelopers = JSON.parse(fs.readFileSync((process.env.CONFIG_PATH)).botDevelopers;
+    let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
     if(!fs.existsSync(filename)) {
         guildAPI.repairFiles(msg.guild);
     }
