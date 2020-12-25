@@ -22,7 +22,7 @@ class RainbowRole {
                     for (var i = 0; i < guildSettings.rainbowRoles.length; i++) {
                         setTimeout(() => {
                             var color = '0xff0000';
-                            console.log('\x1b[35m[RainbowRole] \x1b[31m[DEBUG]\x1b[33m ' + JSON.stringify(discordClient.guilds.cache.find(guild => guild.id === guildID), null, 2) + '\z1b[0m');
+                            console.log('\x1b[35m[RainbowRole] \x1b[31m[DEBUG]\x1b[33m ' + JSON.stringify(discordClient.guilds.cache.find(guild => guild.id === guildID).roles, null, 2) + '\z1b[0m');
                             discordClient.guilds.cache.find(guild => guild.id === guildID).roles.cache.find(role => role.id == guildSettings.rainbowRoles[i]).setColor(color);
                         }, 1000);
                         setTimeout(() => {
