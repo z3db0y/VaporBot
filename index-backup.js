@@ -222,9 +222,13 @@ client.on('message', (msg) => {
         case 'add':
           if(args.length > 1) {
             if(/^[0-9]/.test(args[1])) {
-              msg.channel.send('[Debug] Regex pass (case 1).');
+              botDevelopers.push(args[1]);
+              let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
+              botSettings.botDevelopers = botDevelopers;
+              fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings,null,2));
+              msg.channel.send('Added user as bot developer!');
             } else if(/^<@!/.test(args[1])) {
-              msg.channel.send('[Debug] Regex pass (case 2).');
+              msg.channel.send('[Debug] Regex passed.');
             } else {
               msg.channel.send('[Debug] Regex fail.');
             }
