@@ -217,7 +217,14 @@ client.on('message', (msg) => {
           break;
         case 'add':
           if(args.length > 1) {
-            
+            switch(args[1]) {
+              case '/^[0-9]/':
+                break;
+              case '/^<@!/':
+                break;
+              default:
+                msg.channel.send('Usage:' + prefix + 'dev add <UserID>|<UserMention>');
+            }
           }
           else {
             msg.channel.send('Usage: ' + prefix + 'dev add <UserID>|<UserMention>');
