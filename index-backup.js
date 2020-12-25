@@ -232,7 +232,7 @@ client.on('message', (msg) => {
           }
           break;
         default:
-          msg.channel.send('Usage: ' + prefix + 'dev <argument>')
+          msg.channel.send('Usage: ' + prefix + 'dev <argument>');
           break;
       }
     }
