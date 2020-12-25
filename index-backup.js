@@ -200,8 +200,11 @@ client.on('message', (msg) => {
           fs.writeFileSync(filename, JSON.stringify(guildData, null, 2));
       })
       .catch( (err) => {
-          msg.channel.send('Sorry, I don\'t have permission to do that!');
-          msg.channel.send(err.message);
+          if(err.message === "Missing Permissions") {
+            msg.channel.send('Sorry, I don\'t have permission to do that!');
+          } else {
+            msg.channel.send('An error has occurred! Please try again later.');
+          }
       });
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'dev')) {
