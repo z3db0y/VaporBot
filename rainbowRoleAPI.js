@@ -41,9 +41,7 @@ class RainbowRole {
                         }, 2500);
                     }
                 }
-            } catch (err) {
-                console.log(`\x1b[35m[RainbowRole] \x1b[31m` + err.message + `\x1b[0m`);
-            }
+            } catch (err) {}
         }, 2500);
     }
 
