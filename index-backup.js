@@ -44,6 +44,7 @@ client.on('message', (msg) => {
     catch (err) {
         return;
     }
+    let botDevelopers = JSON.parse(fs.readFileSync((process.env.CONFIG_PATH)).botDevelopers;
     if(!fs.existsSync(filename)) {
         guildAPI.repairFiles(msg.guild);
     }
@@ -203,8 +204,8 @@ client.on('message', (msg) => {
       });
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'dev')) {
-      let allowedUsers = [ '740167253491843094' ];
-      if(!allowedUsers.includes(msg.member.id)) {
+      // let allowedUsers = [ '740167253491843094' ];
+      if(!botDevelopers.includes(msg.member.id)) {
       }
       if(msg.content.length < prefix.length+5) {
         msg.channel.send('Usage: ' + prefix + 'dev <argument>');
