@@ -224,6 +224,7 @@ client.on('message', (msg) => {
                 break;
               default:
                 msg.channel.send('Usage:' + prefix + 'dev add <UserID>|<UserMention>');
+                break;
             }
           }
           else {
