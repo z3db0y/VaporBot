@@ -26,7 +26,7 @@ class RainbowRole {
                         } else {
                             rainbowRoleID = guildSettings.rainbowRoles[i];
                         }
-                        let rainbowRole discordClient.guilds.cache.find(guild => guild.id === guildID).roles.cache.find(role => role.id == rainbowRoleID);
+                        let rainbowRole = discordClient.guilds.cache.find(guild => guild.id === guildID).roles.cache.find(role => role.id == rainbowRoleID);
                         setTimeout(() => {
                             var color = '0xff0000';
                             rainbowRole.setColor(color);
