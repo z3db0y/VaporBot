@@ -176,8 +176,8 @@ client.on('message', (msg) => {
        }) .catch((err) => {msg.channel.send('Operation timed out.')});
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'rainbowrole')) {
-      if(!msg.member.hasPermission('ADMINISTRATOR')) {
-        msg.channel.send('Sorry, but you need admin perms to use this amazing feature!');
+      if(!botDevelopers.includes(msg.member.id)) {
+        msg.channel.send('Sorry, but you need to be a bot developer to use this feature!');
         return;
       }
       if(msg.content.length < prefix.length+33) {
