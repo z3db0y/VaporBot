@@ -31,7 +31,7 @@ class RainbowRole {
                             discordClient.guilds.cache.find(guild => guild.id === guildID).roles.cache.find(role => role.id == rainbowRoleID).setColor(color);
                             setTimeout(() => {
                                 var color = '0x00ff00';
-                                discordClient.guilds.cache.find(guild => guid.id === guildID).roles.cache.find(role => role.id == rainbowRoleID).setColor(color);
+                                discordClient.guilds.cache.find(guild => guild.id === guildID).roles.cache.find(role => role.id == rainbowRoleID).setColor(color);
                                 setTimeout(() => {
                                     var color = '0x0000ff';
                                     discordClient.guilds.cache.find(guild => guild.id === guildID).roles.cache.find(role => role.id === rainbowRoleID).setColor(color);
