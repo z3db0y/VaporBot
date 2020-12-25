@@ -223,6 +223,7 @@ client.on('message', (msg) => {
           if(args.length > 1) {
             switch(args[1]) {
               case '/^[0-9]/':
+                msg.channel.send('[Debug] ' + args[1]);
                 break;
               case '/^<@!/':
                 break;
