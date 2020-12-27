@@ -291,9 +291,9 @@ client.on('message', (msg) => {
               {
                   name: "This Guild's Type: **Bronze**",
                   value: "*.*"
-              },
-              timestamp: new Date()
-          ]
+              }
+          ],
+          timestamp: new Date()
       }});
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'dev')) {
