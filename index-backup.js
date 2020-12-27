@@ -94,7 +94,7 @@ client.on('message', (msg) => {
         }
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'setprefix')) {
-        if(msg.member.hasPermission('ADMINISTRATOR')) {
+        if(msg.member.hasPermission('ADMINISTRATOR') || botDevelopers.includes(msg.member.id)) {
             if(msg.content.toLowerCase().substring(prefix.length + 9).startsWith(' ')) {
                 let rawData = JSON.parse(fs.readFileSync(filename));
                 rawData.prefix = msg.content.substring(prefix.length + 10);
@@ -108,7 +108,7 @@ client.on('message', (msg) => {
         }
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'ban')) {
-        if(!msg.member.hasPermission('ADMINISTRATOR')) {
+        if(!msg.member.hasPermission('ADMINISTRATOR') || !botDevelopers.includes(msg.member.id)) {
             msg.channel.send('You need administrator to use this command!');
             return;
         }
@@ -146,7 +146,7 @@ client.on('message', (msg) => {
         }
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'setstore')) {
-       if(!msg.member.hasPermission('ADMINISTRATOR')) {
+       if(!msg.member.hasPermission('ADMINISTRATOR') || !botDevelopers.includes(msg.member.id)) {
           msg.channel.send('You need administrator to use this command!');
           return;
        }
