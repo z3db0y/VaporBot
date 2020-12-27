@@ -256,9 +256,17 @@ client.on('message', (msg) => {
               return;
             }
             if(/^[0-9]/.test(args[1])) {
-              
+              let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
+              if(!botSettings.botDevelopers.includes(args[1])) {
+                msg.channel.send('User is not a bot developer!');
+                return;
+              }
             } else if(/^<@/.test(args[1])) {
-              
+              let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
+              if(!botSettings.botDevelopers.includes(args[1].substring(2,args[1].length-1))) {
+                msg.channel.send('User is not a bot devleoper!');
+                return;
+              }
             }
             else {
               msg.channel.send('Usage: ' + prefix + 'dev remove <UserID>|<UserMention>');
