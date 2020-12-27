@@ -308,6 +308,9 @@ client.on('message', (msg) => {
                   name: msg.author.tag,
                   icon_url: msg.author.avatarURL()
               },
+              thumbnail: {
+                  url: client.user.avatarURL()
+              },
               fields: [
                   {
                       name: prefix + "dev help",
@@ -333,7 +336,8 @@ client.on('message', (msg) => {
                       name: prefix + "rainbowrole",
                       value: "Toggles rainbow roles."
                   }
-              ]
+              ],
+              timestamp: new Date()
           }});
           break;
         default:
