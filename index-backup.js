@@ -217,6 +217,9 @@ client.on('message', (msg) => {
         return;
       }
       let args = msg.content.substring(prefix.length+6).split(' ');
+      if(!/^[0-9]/.test(args[1])) {
+        msg.channel.send('Amount must be a number!');
+      }
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'dev')) {
       if(!botDevelopers.includes(msg.member.id)) {
