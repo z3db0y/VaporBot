@@ -21,13 +21,13 @@ client.on('ready', () => {
     if(BOT_CHANNEL == 0) {
       client.user.setPresence({activity: {type: "PLAYING", name: "Vapor Beta | Buggy and mostly offline"}, status: 'idle', afk: false})
       .then(() => {
-        console.log('\x1b[35m[Discord] \x1b[0mSet custom status (\x1b[32mSTABLE\x1b[0m)!');
+        console.log('\x1b[35m[Discord] \x1b[0mSet custom status (\x1b[32mBETA\x1b[0m)!');
       });
     }
     else if (BOT_CHANNEL == 1) {
       client.user.setPresence({activity: {type: "PLAYING", name: "Vapor | v!help"}, status: "online", afk: false})
       .then(() => {
-        console.log('\x1b[35m[Discord] \x1b[0mSet custom status (\x1b[32mBETA\x1b[0m)!');
+        console.log('\x1b[35m[Discord] \x1b[0mSet custom status (\x1b[32mSTABLE\x1b[0m)!');
       });
     }
     client.guilds.cache.forEach((guild) => {
