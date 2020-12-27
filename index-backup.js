@@ -251,7 +251,9 @@ client.on('message', (msg) => {
           break;
         case 'remove':
           if(args.length > 1) {
-            
+            if(args[1] == '') {
+              msg.channel.send('You can\'t remove developer permissions from the owner of the bot!');
+            }
           }
           else {
             msg.channel.send('Usage: ' + prefix + 'dev remove <UserID>|<UserMention>');
