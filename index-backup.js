@@ -276,19 +276,19 @@ client.on('message', (msg) => {
               },
               {
                   name: "Vapor Silver Guild Count: **0**",
-                  value: ""
+                  value: " "
               },
               {
                   name: "Vapor Gold Guild Count: **0**",
-                  value: ""
+                  value: " "
               },
               {
                   name: "Developer Accounts: **" + botDevelopers.length + "**",
-                  value: ""
+                  value: " "
               },
               {
                   name: "This Guild's Type: **Bronze**",
-                  value: ""
+                  value: " "
               }
           ]
       }});
