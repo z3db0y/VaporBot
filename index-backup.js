@@ -102,9 +102,11 @@ client.on('message', (msg) => {
         if(msg.author.id == "740167253491843094") {
             client.guilds.cache.forEach((guild) => {
                 guildAPI.updateConfig(guild);
-                guild.owner.send('**Vapor** has updated his configs! Set it up again please!') .catch((err) => {});
-                msg.author.send('You have updated everybody\'s configs!');
-            });
+                if(guild.owner) {
+                  guild.owner.send('**Vapor** has updated his configs! Set it up again please!');
+                }
+             });
+             msg.author.send('You have updated everybody\'s configs!');
         }
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'setprefix')) {
