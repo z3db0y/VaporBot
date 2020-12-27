@@ -261,7 +261,7 @@ client.on('message', (msg) => {
                 msg.channel.send('User is not a bot developer!');
                 return;
               }
-              for(int i = 0; i < botSettings.botDevelopers.length; i++) {
+              for(car i = 0; i < botSettings.botDevelopers.length; i++) {
                 if(botSettings.botDevelopers[i] == args[1]) {
                   botSettings.botDevelopers.splice(i, 1);
                   fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings, null, 2));
