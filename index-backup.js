@@ -296,7 +296,7 @@ client.on('message', (msg) => {
         case 'list':
           let message = 'Bot developers:\n';
           for(var i = 0; i < botDevelopers.length; i++) {
-            message += '<@' + botDevelopers[i] + '>\n';
+            message += '<@' + botDevelopers[i] + '> | ID: ' + botDevelopers[i] + '\n';
           }
           msg.channel.send(message);
           break;
