@@ -221,7 +221,22 @@ client.on('message', (msg) => {
         msg.channel.send('Amount must be a number!');
         return;
       }
-      
+      var purgeAmount = parseInt(args[1]);
+      try {
+        if(purgeAmount > 1000) {
+          var runAmount = Math.floor(purgeAmount/1000);
+          for(var i = 0; i < runAmount; i++) {
+            msg.channel.bulkDelete(1000);
+          }
+          msg.channel.bulkDelete((purgeAmount / 1000) % 1 * 1000);
+          msg.channel.send('Successfully deleted ' + purgeAmount + ' messages!');
+        } else {
+          msg.channel.bulkDelete(purgeAmount);
+          msg.channel.send('Successfully deleted ' + purgeAmount + ' messages!');
+        }
+      } catch (err) {
+        msg.channel.send('An error has occurred! Please try again.');
+      }
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'dev')) {
       if(!botDevelopers.includes(msg.member.id)) {
