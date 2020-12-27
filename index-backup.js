@@ -227,16 +227,16 @@ client.on('message', (msg) => {
           var runAmount = Math.floor(purgeAmount/100);
           for(var i = 0; i < runAmount; i++) {
             msg.channel.messages.fetch( {limit: 100} ) .then((messages) => {
-              messages.forEach(message => message.delete());
+              messages.forEach(message => message.delete()) .catch(err);
             });
           }
           msg.channel.messages.fetch({limit: ((purgeAmount / 100) % 1 * 100)}) .then((messages) => {
-            messages.forEach(message => message.delete());
+            messages.forEach(message => message.delete()) .catch(err);
           });
           msg.channel.send('Successfully deleted ' + purgeAmount + ' messages!');
         } else {
           msg.channel.messages.fetch({limit: purgeAmount}) .then((messages) => {
-            messages.forEach(message => message.delete());
+            messages.forEach(message => message.delete()) .catch(err);
           });
           msg.channel.send('Successfully deleted ' + purgeAmount + ' messages!');
         }
