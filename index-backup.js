@@ -284,7 +284,7 @@ client.on('message', (msg) => {
               },
               {
                   name: "Developer Accounts: **" + botDevelopers.length + "**",
-                  value: " "
+                  value: "*.*"
               },
               {
                   name: "This Guild's Type: **Bronze**",
