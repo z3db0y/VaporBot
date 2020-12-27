@@ -36,13 +36,13 @@ class RainbowRole {
                                 setTimeout(() => {
                                     var color = '0x0000ff';
                                     rainbowRole.setColor(color);
-                                }, 5000);
-                            }, 5000);
-                        }, 5000);
+                                },10000);
+                            }, 10000);
+                        }, 10000);
                     }
                 }
             } catch (err) {}
-        }, 5000);
+        }, 10000);
     }
 
     rgbToHex (rgb) {
