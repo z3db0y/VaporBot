@@ -250,6 +250,12 @@ client.on('message', (msg) => {
           }
           break;
         case 'remove':
+          if(args.length > 1) {
+            
+          }
+          else {
+            msg.channel.send('Usage: ' + prefix + 'dev remove <UserID>|<UserMention>');
+          }
           break;
         default:
           msg.channel.send('Usage: ' + prefix + 'dev <argument>');
