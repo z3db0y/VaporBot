@@ -4,5 +4,7 @@
     "enabled": false,
     "logChannelId": null,
     "actionsLogged": "none"
-  }
+  },
+  "store": null,
+  "rainbowRoles": []
 }
