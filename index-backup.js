@@ -300,6 +300,8 @@ client.on('message', (msg) => {
           }
           msg.channel.send(message);
           break;
+        case 'help':
+          break;
         default:
           msg.channel.send('Usage: ' + prefix + 'dev <argument>');
           break;
