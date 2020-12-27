@@ -242,7 +242,7 @@ client.on('message', (msg) => {
               fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings,null,2));
               msg.channel.send('Added user as bot developer!');
             } else {
-              msg.channel.send('[Debug] Regex fail.');
+              msg.channel.send('Usage: ' + prefix + 'dev add <UserID>|<UserMention>');
             }
           }
           else {
