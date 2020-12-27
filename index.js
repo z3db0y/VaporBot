@@ -79,6 +79,10 @@ client.on('message', (msg) => {
                 {
                     name: prefix + "setprefix",
                     value: "Update the guild's prefix."
+                },
+                {
+                    name: prefix + "purge",
+                    value: "Removes amount of messages specified."
                 }
             ],
             timestamp: new Date()
