@@ -20,7 +20,8 @@ client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
     if(BOT_CHANNEL == 0) {
       client.user.setPresence({activity: {type: "PLAYING", name: "Vapor Beta | Buggy and mostly offline"}, status: 'idle', afk: false});
-    } else {
+    }
+    else if (BOT_CHANNEL == 1) {
       client.user.setPresence({activity: {type: "PLAYING", name: "Vapor | v!help"}, status: "online", afk: false});
     }
     client.guilds.cache.forEach((guild) => {
