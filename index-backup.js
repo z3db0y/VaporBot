@@ -217,12 +217,11 @@ client.on('message', (msg) => {
         return;
       }
       let args = msg.content.substring(prefix.length+6).split(' ');
-      msg.channel.send('Debug: ' + JSON.stringify(args));
-      if(!/^[0-9]*$/.test(args[1])) {
+      if(!/^[0-9]*$/.test(args[0])) {
         msg.channel.send('Amount must be a number!');
         return;
       }
-      var purgeAmount = parseInt(args[1]);
+      var purgeAmount = parseInt(args[0]);
       try {
         if(purgeAmount > 1000) {
           var runAmount = Math.floor(purgeAmount/1000);
