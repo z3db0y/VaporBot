@@ -19,10 +19,16 @@ const rainbowRoleAPI = new RainbowRoleAPI.RainbowRole();
 client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
     if(BOT_CHANNEL == 0) {
-      client.user.setPresence({activity: {type: "PLAYING", name: "Vapor Beta | Buggy and mostly offline"}, status: 'idle', afk: false});
+      client.user.setPresence({activity: {type: "PLAYING", name: "Vapor Beta | Buggy and mostly offline"}, status: 'idle', afk: false})
+      .then(() => {
+        console.log('\x1b[35m[Discord] \x1b[0mSet custom status (\x1b[32mSTABLE\x1b[0m)!');
+      });
     }
     else if (BOT_CHANNEL == 1) {
-      client.user.setPresence({activity: {type: "PLAYING", name: "Vapor | v!help"}, status: "online", afk: false});
+      client.user.setPresence({activity: {type: "PLAYING", name: "Vapor | v!help"}, status: "online", afk: false})
+      .then(() => {
+        
+      });
     }
     client.guilds.cache.forEach((guild) => {
         guildAPI.initialiseGuild(guild);
