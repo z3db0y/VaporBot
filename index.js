@@ -2,7 +2,7 @@
 
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -13,13 +13,16 @@ const guildAPI = new GuildAPI.GuildAPI();
 const activeVCs = new Map();
 const vcConnectionMap = new Map();
 const { exit } = require('process');
+const RainbowRoleAPI = require('./rainbowRoleAPI');
+const rainbowRoleAPI = new RainbowRoleAPI.RainbowRole();
 
 client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
-    client.user.setPresence({activity: {type: "PLAYING",name: "vapor | v!help"}, status: 'online', afk: false});
+    client.user.setPresence({activity: {type: "PLAYING",name: "vapor | TEST MODE"}, status: 'dnd', afk: false});
     console.log('\x1b[35m[Discord]\x1b[0m Set custom status!')
     client.guilds.cache.forEach((guild) => {
         guildAPI.initialiseGuild(guild);
+        rainbowRoleAPI.runRainbowRole(client, guild.id);
     });
 });
 
@@ -30,6 +33,7 @@ client.on('guildDelete', (guild) => {
 client.on('guildCreate', (guild) => {
     console.log(`\x1b[35m[GuildManager]\x1b[0m I have been added to \x1b[32m${guild.name}\x1b[0m!`);
     guildAPI.initialiseGuild(guild);
+    rainbowRoleAPI.runRainbowRole(client, guild.id);
 });
 
 client.on('message', (msg) => {
@@ -40,6 +44,7 @@ client.on('message', (msg) => {
     catch (err) {
         return;
     }
+    let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
     if(!fs.existsSync(filename)) {
         guildAPI.repairFiles(msg.guild);
     }
@@ -89,7 +94,7 @@ client.on('message', (msg) => {
         }
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'setprefix')) {
-        if(msg.member.hasPermission('ADMINISTRATOR')) {
+        if(msg.member.hasPermission('ADMINISTRATOR') || botDevelopers.includes(msg.member.id)) {
             if(msg.content.toLowerCase().substring(prefix.length + 9).startsWith(' ')) {
                 let rawData = JSON.parse(fs.readFileSync(filename));
                 rawData.prefix = msg.content.substring(prefix.length + 10);
@@ -103,7 +108,7 @@ client.on('message', (msg) => {
         }
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'ban')) {
-        if(!msg.member.hasPermission('ADMINISTRATOR')) {
+        if(!msg.member.hasPermission('ADMINISTRATOR') || !botDevelopers.includes(msg.member.id)) {
             msg.channel.send('You need administrator to use this command!');
             return;
         }
@@ -141,7 +146,7 @@ client.on('message', (msg) => {
         }
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'setstore')) {
-       if(!msg.member.hasPermission('ADMINISTRATOR')) {
+       if(!msg.member.hasPermission('ADMINISTRATOR') || !botDevelopers.includes(msg.member.id)) {
           msg.channel.send('You need administrator to use this command!');
           return;
        }
@@ -170,8 +175,212 @@ client.on('message', (msg) => {
          }
        }) .catch((err) => {msg.channel.send('Operation timed out.')});
     }
-    else if (msg.content.toLowerCase().startsWith(prefix + 'setwarns')) {
+    else if (msg.content.toLowerCase().startsWith(prefix + 'rainbowrole')) {
+      if(!botDevelopers.includes(msg.member.id)) {
+        msg.channel.send('Sorry, but you need to be a bot developer to use this feature!');
+        return;
+      }
+      if(msg.content.length < prefix.length+33) {
+        msg.channel.send('Invalid usage! Use: ' + prefix + 'rainbowrole <ROLE>');
+        return;
+      }
       let guildData = JSON.parse(fs.readFileSync(filename));
+      msg.guild.roles.cache.find(role => role.id === msg.content.substring(prefix.length+15, prefix.length+33)).setColor(msg.guild.roles.cache.find(role => role.id === msg.content.substring(prefix.length+15, prefix.length+33)).color)
+      .then( () => {
+          for( var i = 0; i < guildData.rainbowRoles; i++) {
+              if(guildData.rainbowRoles[i] === msg.content.substring(prefix.length+15, prefix.length+33)) {
+                  guildData.rainbowRoles.splice(i, 1);
+                  fs.writeFileSync(filename, JSON.stringify(guildData, null, 2));
+                  msg.channel.send('Rainbow role disabled!');
+                  return;
+              }
+          }
+          guildData.rainbowRoles.push(msg.content.substring(prefix.length+15, prefix.length+33));
+          msg.channel.send('Enabled rainbow role for ' + msg.content.substring(prefix.length+12, prefix.length+33) + '>!');
+          fs.writeFileSync(filename, JSON.stringify(guildData, null, 2));
+      })
+      .catch( (err) => {
+          if(err.message === "Missing Permissions") {
+            msg.channel.send('Sorry, I don\'t have permission to do that!');
+          } else {
+            msg.channel.send('An error has occurred! Please try again later.');
+          }
+      });
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'purge')) {
+      if(!msg.member.hasPermission('ADMINISTRATOR') || !botDevelopers.includes(msg.member.id)) {
+        msg.channel.send('You need administrator permissions to do this!');
+        return;
+      }
+      if(msg.content.length < prefix.length+7) {
+        msg.channel.send('Usage: ' + prefix + 'purge <number>');
+        return;
+      }
+      let args = msg.content.substring(prefix.length+6).split(' ');
+      if(!/^[0-9]*$/.test(args[0])) {
+        msg.channel.send('Amount must be a number!');
+        return;
+      }
+      var purgeAmount = parseInt(args[0]);
+      try {
+        if(purgeAmount > 100) {
+          var runAmount = Math.floor(purgeAmount/100);
+          for(var i = 0; i < runAmount; i++) {
+            msg.channel.messages.fetch( {limit: 100} ) .then((messages) => {
+              messages.forEach(message => message.delete()) .catch(err);
+            });
+          }
+          msg.channel.messages.fetch({limit: ((purgeAmount / 100) % 1 * 100)}) .then((messages) => {
+            messages.forEach(message => message.delete()) .catch(err);
+          });
+          msg.channel.send('Successfully deleted ' + purgeAmount + ' messages!');
+        } else {
+          msg.channel.messages.fetch({limit: purgeAmount}) .then((messages) => {
+            messages.forEach(message => message.delete()) .catch(err);
+          });
+          msg.channel.send('Successfully deleted ' + purgeAmount + ' messages!');
+        }
+      } catch (err) {
+        msg.channel.send('An error has occurred! Please try again.');
+      }
+    }
+    else if (msg.content.toLowerCase().startsWith(prefix + 'dev')) {
+      if(!botDevelopers.includes(msg.member.id)) {
+        return;
+      }
+      if(msg.content.length < prefix.length+5) {
+        msg.channel.send('Usage: ' + prefix + 'dev <argument>');
+        return;
+      }
+      let args = msg.content.toLowerCase().substring(prefix.length+4).split(' ');
+      switch(args[0]) {
+        case 'guildsettings':
+          msg.channel.send('```' + fs.readFileSync(filename) + '```');
+          break;
+        case 'add':
+          if(args.length > 1) {
+            if(/^[0-9]/.test(args[1])) {
+              botDevelopers.push(args[1]);
+              let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
+              if(botSettings.botDevelopers.includes(args[1])) {
+                msg.channel.send('User is already a bot developer!');
+                return;
+              }
+              botSettings.botDevelopers = botDevelopers;
+              fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings,null,2));
+              msg.channel.send('Added user as bot developer!');
+            } else if(/^<@/.test(args[1])) {
+              botDevelopers.push(args[1].substring(2,args[1].length-1));
+              let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
+              if(botSettings.botDevelopers.includes(args[1].substring(2,args[1].length-1))) {
+                msg.channel.send('User is already a bot developer!');
+                return;
+              }
+              botSettings.botDevelopers = botDevelopers;
+              fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings,null,2));
+              msg.channel.send('Added user as bot developer!');
+            } else {
+              msg.channel.send('Usage: ' + prefix + 'dev add <UserID>|<UserMention>');
+            }
+          }
+          else {
+            msg.channel.send('Usage: ' + prefix + 'dev add <UserID>|<UserMention>');
+          }
+          break;
+        case 'remove':
+          if(args.length > 1) {
+            if(args[1] == '740167253491843094' || args[1].substring(2,args[1].length-1) == '740167253491843094') {
+              msg.channel.send('You can\'t remove developer permissions from the owner of the bot!');
+              return;
+            }
+            if(/^[0-9]/.test(args[1])) {
+              let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
+              if(!botSettings.botDevelopers.includes(args[1])) {
+                msg.channel.send('User is not a bot developer!');
+                return;
+              }
+              for(var i = 0; i < botSettings.botDevelopers.length; i++) {
+                if(botSettings.botDevelopers[i] == args[1]) {
+                  botSettings.botDevelopers.splice(i, 1);
+                  fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings, null, 2));
+                  msg.channel.send('Removed user from bot developers!');
+                  return;
+                }
+              }
+            } else if(/^<@/.test(args[1])) {
+              let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
+              if(!botSettings.botDevelopers.includes(args[1].substring(2,args[1].length-1))) {
+                msg.channel.send('User is not a bot devleoper!');
+                return;
+              }
+              for(var i = 0; i < botSettings.botDevelopers.length; i++) {
+                if(botSettings.botDevelopers[i] == args[1].substring(2, args[1].length-1)) {
+                  botSettings.botDevelopers.splice(i, 1);
+                  fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings, null, 2));
+                  msg.channel.send('Removed user from bot developers!');
+                  return;
+                }
+              }
+            }
+            else {
+              msg.channel.send('Usage: ' + prefix + 'dev remove <UserID>|<UserMention>');
+            }
+          }
+          else {
+            msg.channel.send('Usage: ' + prefix + 'dev remove <UserID>|<UserMention>');
+          }
+          break;
+        case 'list':
+          let message = 'Bot developers:\n';
+          for(var i = 0; i < botDevelopers.length; i++) {
+            message += '<@' + botDevelopers[i] + '> | ID: ' + botDevelopers[i] + '\n';
+          }
+          msg.channel.send(message);
+          break;
+        case 'help':
+          msg.channel.send({ embed: {
+              title: "Vapor Developer Options",
+              color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
+              author: {
+                  name: msg.author.tag,
+                  icon_url: msg.author.avatarURL()
+              },
+              thumbnail: {
+                  url: client.user.avatarURL()
+              },
+              fields: [
+                  {
+                      name: prefix + "dev help",
+                      value: "Displays this message."
+                  },
+                  {
+                      name: prefix + "dev list",
+                      value: "Lists developer accounts."
+                  },
+                  {
+                      name: prefix + "dev add",
+                      value: "Adds a developer account."
+                  },
+                  {
+                      name: prefix + "dev remove",
+                      value: "Removes a developer account."
+                  },
+                  {
+                      name: prefix + "dev guildsettings",
+                      value: "Displays the guild's settings."
+                  },
+                  {
+                      name: prefix + "rainbowrole",
+                      value: "Toggles rainbow roles."
+                  }
+              ],
+              timestamp: new Date()
+          }});
+          break;
+        default:
+          msg.channel.send('Usage: ' + prefix + 'dev <argument>');
+          break;
+      }
     }
 });
 
