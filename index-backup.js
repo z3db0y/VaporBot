@@ -213,6 +213,7 @@ client.on('message', (msg) => {
       }
       if(msg.content.length < prefix.length+5) {
         msg.channel.send('Usage: ' + prefix + 'dev <argument>');
+        return;
       }
       let args = msg.content.toLowerCase().substring(prefix.length+4).split(' ');
       switch(args[0]) {
