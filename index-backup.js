@@ -261,6 +261,14 @@ client.on('message', (msg) => {
                 msg.channel.send('User is not a bot developer!');
                 return;
               }
+              for(int i = 0; i < botSettings.botDevelopers.length; i++) {
+                if(botSettings.botDevelopers[i] == args[1]) {
+                  botSettings.botDevelopers.splice(i, 1);
+                  fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings, null, 2));
+                  msg.channel.send('Removed user from bot developers!');
+                  return;
+                }
+              }
             } else if(/^<@/.test(args[1])) {
               let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
               if(!botSettings.botDevelopers.includes(args[1].substring(2,args[1].length-1))) {
