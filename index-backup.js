@@ -251,8 +251,9 @@ client.on('message', (msg) => {
           break;
         case 'remove':
           if(args.length > 1) {
-            if(args[1] == '') {
+            if(args[1] == '740167253491843094' || args[1].substring(2,args[1].length-1)) {
               msg.channel.send('You can\'t remove developer permissions from the owner of the bot!');
+              return;
             }
           }
           else {
