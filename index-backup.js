@@ -207,6 +207,12 @@ client.on('message', (msg) => {
           }
       });
     }
+    else if(msg.content.toLowerase().startsWith(prefix + 'purge')) {
+      if(!msg.member.hasPermission('ADMINISTRATOR') || !botDevelopers.includes(msg.member.id)) {
+        msg.channel.send('You need administrator permissions to do this!');
+        return;
+      }
+    }
     else if (msg.content.toLowerCase().startsWith(prefix + 'dev')) {
       if(!botDevelopers.includes(msg.member.id)) {
         return;
