@@ -276,7 +276,7 @@ client.on('message', (msg) => {
                 return;
               }
               for(var i = 0; i < botSettings.botDevelopers.length; i++) {
-                if(botSettings.botDevelopers[i] == ars[1].substring(2, args.length-1)) {
+                if(botSettings.botDevelopers[i] == args[1].substring(2, args.length-1)) {
                   botSettings.botDevelopers.splice(i, 1);
                   fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings, null, 2));
                   msg.channel.send('Removed user from bot developers!');
