@@ -235,7 +235,9 @@ client.on('message', (msg) => {
           });
           msg.channel.send('Successfully deleted ' + purgeAmount + ' messages!');
         } else {
-          msg.channel.bulkDelete(purgeAmount);
+          msg.channel.messages.fetch({limit: purgeAmount}) .then((messages) => {
+            messages.forEach(message => message.delete());
+          });
           msg.channel.send('Successfully deleted ' + purgeAmount + ' messages!');
         }
       } catch (err) {
