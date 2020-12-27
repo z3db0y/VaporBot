@@ -249,6 +249,8 @@ client.on('message', (msg) => {
             msg.channel.send('Usage: ' + prefix + 'dev add <UserID>|<UserMention>');
           }
           break;
+        case 'remove':
+          break;
         default:
           msg.channel.send('Usage: ' + prefix + 'dev <argument>');
           break;
