@@ -103,7 +103,7 @@ client.on('message', (msg) => {
             client.guilds.cache.forEach((guild) => {
                 guildAPI.updateConfig(guild);
                 if(guild.owner) {
-                guild.owner.send('**Vapor** has updated his configs! Set it up again please!');
+                  guild.owner.send('**Vapor** has updated his configs! Set it up again please!');
                 }
             });
             msg.author.send('You have updated everybody\'s configs!');
