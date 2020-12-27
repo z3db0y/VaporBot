@@ -212,6 +212,11 @@ client.on('message', (msg) => {
         msg.channel.send('You need administrator permissions to do this!');
         return;
       }
+      if(msg.content.length < prefix.length+7) {
+        msg.channel.send('Usage: ' + prefix + 'purge <number>');
+        return;
+      }
+      let args = msg.content.substring(prefix.length+6).split(' ');
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'dev')) {
       if(!botDevelopers.includes(msg.member.id)) {
