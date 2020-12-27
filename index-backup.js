@@ -291,7 +291,8 @@ client.on('message', (msg) => {
               {
                   name: "This Guild's Type: **Bronze**",
                   value: "*.*"
-              }
+              },
+              timestamp: new Date()
           ]
       }});
     }
