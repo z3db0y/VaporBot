@@ -258,6 +258,33 @@ client.on('message', (msg) => {
         msg.channel.send('An error has occurred! Please try again.');
       }
     }
+    else if (msg.content.toLowerCase().startsWith(prefix + 'info')) {
+      msg.channel.send({embed: {
+          title: "Vapor Stats",
+          color: '0x' + msg.guild.me.displayHexColor.substring(1),
+          author: {
+              name: msg.author.tag,
+              icon_url: msg.author.avatarURL()
+          },
+          thumbnail: {
+              url: client.user.avatarURL()
+          },
+          fields: [
+              {
+                  name: "Guild Count: **" + client.guilds.cache.size + "**"
+              },
+              {
+                  name: "Vapor Silver Guild Count: **0**"
+              },
+              {
+                  name: "Vapor Gold Guild Count: **0**"
+              },
+              {
+                  name: "Developer Accounts: **" + botDevelopers.length + "**"
+              }
+          ]
+      }});
+    }
     else if (msg.content.toLowerCase().startsWith(prefix + 'dev')) {
       if(!botDevelopers.includes(msg.member.id)) {
         return;
