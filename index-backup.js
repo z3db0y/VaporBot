@@ -293,6 +293,13 @@ client.on('message', (msg) => {
             msg.channel.send('Usage: ' + prefix + 'dev remove <UserID>|<UserMention>');
           }
           break;
+        case 'list':
+          let message = 'Bot developers:\n';
+          for(var i = 0; i < botDevelopers.length; i++) {
+            message += '<@' + botDevelopers[i] + '>\n';
+          }
+          msg.channel.send(message);
+          break;
         default:
           msg.channel.send('Usage: ' + prefix + 'dev <argument>');
           break;
