@@ -271,16 +271,24 @@ client.on('message', (msg) => {
           },
           fields: [
               {
-                  name: "Guild Count: **" + client.guilds.cache.size + "**"
+                  name: "Guild Count: **" + client.guilds.cache.size + "**",
+                  value: ""
               },
               {
-                  name: "Vapor Silver Guild Count: **0**"
+                  name: "Vapor Silver Guild Count: **0**",
+                  value: ""
               },
               {
-                  name: "Vapor Gold Guild Count: **0**"
+                  name: "Vapor Gold Guild Count: **0**",
+                  value: ""
               },
               {
-                  name: "Developer Accounts: **" + botDevelopers.length + "**"
+                  name: "Developer Accounts: **" + botDevelopers.length + "**",
+                  value: ""
+              },
+              {
+                  name: "This Guild's Type: **Bronze**",
+                  value: ""
               }
           ]
       }});
