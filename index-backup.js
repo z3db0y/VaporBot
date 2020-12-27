@@ -301,6 +301,40 @@ client.on('message', (msg) => {
           msg.channel.send(message);
           break;
         case 'help':
+          msg.channel.send({ embed: {
+              title: "Vapor Developer Options",
+              color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
+              author: {
+                  name: msg.author.tag,
+                  icon_url: msg.author.avatarURL()
+              },
+              fields: [
+                  {
+                      name: prefix + "dev help",
+                      value: "Displays this message."
+                  },
+                  {
+                      name: prefix + "dev list",
+                      value: "Lists developer accounts."
+                  },
+                  {
+                      name: prefix + "dev add",
+                      value: "Adds a developer account."
+                  },
+                  {
+                      name: prefix + "dev remove",
+                      value: "Removes a developer account."
+                  },
+                  {
+                      name: prefix + "dev guildsettings",
+                      value: "Displays the guild's settings."
+                  },
+                  {
+                      name: prefix + "rainbowrole",
+                      value: "Toggles rainbow roles."
+                  }
+              ]
+          }});
           break;
         default:
           msg.channel.send('Usage: ' + prefix + 'dev <argument>');
