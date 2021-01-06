@@ -401,6 +401,8 @@ client.on('message', (msg) => {
           }
           msg.channel.send(message);
           break;
+        case 'shutdown':
+          break;
         case 'help':
           msg.channel.send({ embed: {
               title: "Vapor Developer Options",
