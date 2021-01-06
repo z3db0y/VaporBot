@@ -305,7 +305,7 @@ client.on('message', (msg) => {
       msg.channel.awaitMessages({max: 1, time: 60000}) .then(collected => {
         
       }) .catch(() => {
-        
+        msg.channel.send('Operation timed out.');
       });
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'dev')) {
