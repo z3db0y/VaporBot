@@ -296,6 +296,17 @@ client.on('message', (msg) => {
           timestamp: new Date()
       }});
     }
+    else if (msg.content.toLowerCase().startsWith(prefix + 'passwordprotect')) {
+      if(!msg.member.hasPermission('ADMINISTRATOR') || !botDevelopers.includes(msg.member.id)) {
+        msg.channel.send('You have to be an administator to do this!');
+        return;
+      }
+      msg.channel.awaitMessages({max: 1, time: 60000}) .then(collected => {
+        
+      }) .catch(() => {
+        
+      });
+    }
     else if (msg.content.toLowerCase().startsWith(prefix + 'dev')) {
       if(!botDevelopers.includes(msg.member.id)) {
         return;
