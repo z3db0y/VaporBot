@@ -301,6 +301,7 @@ client.on('message', (msg) => {
         msg.channel.send('You have to be an administator to do this!');
         return;
       }
+      msg.channel.send('Please enter the channel where you want to accept passwords:');
       msg.channel.awaitMessages({max: 1, time: 60000}) .then(collected => {
         
       }) .catch(() => {
