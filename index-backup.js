@@ -302,8 +302,8 @@ client.on('message', (msg) => {
         return;
       }
       msg.channel.send('Please enter the channel where you want to accept passwords:');
-      msg.channel.awaitMessages({max: 1, time: 60000}) .then(collected => {
-        msg.channel.send(collected.first.content);
+      msg.channel.awaitMessages(m => m.author.id == msg.author.id, {max: 1, time: 60000}) .then(collected => {
+        msg.channel.send(collected.first().content);
       }) .catch(() => {
         msg.channel.send('Operation timed out.');
       });
