@@ -402,7 +402,6 @@ client.on('message', (msg) => {
           msg.channel.send(message);
           break;
         case 'shutdown':
-          msg.channel.send('Shutting down...');
           client.destroy();
           break;
         case 'help':
