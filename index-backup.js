@@ -247,12 +247,12 @@ client.on('message', (msg) => {
             });
           }
           msg.channel.messages.fetch({limit: ((purgeAmount / 100) % 1 * 100)}) .then((messages) => {
-            messages.forEach(message => message.delete()) .catch(err);
+            messages.bulkDelete() .catch(err);
           });
           msg.channel.send('Successfully deleted ' + purgeAmount + ' messages!');
         } else {
           msg.channel.messages.fetch({limit: purgeAmount}) .then((messages) => {
-            messages.forEach(message => message.delete()) .catch(err);
+            messages.bulkDelete() .catch(err);
           });
           msg.channel.send('Successfully deleted ' + purgeAmount + ' messages!');
         }
