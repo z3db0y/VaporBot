@@ -2,7 +2,7 @@
 
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -105,8 +105,8 @@ client.on('message', (msg) => {
                 if(guild.owner) {
                   guild.owner.send('**Vapor** has updated his configs! Set it up again please!');
                 }
-            });
-            msg.author.send('You have updated everybody\'s configs!');
+             });
+             msg.author.send('You have updated everybody\'s configs!');
         }
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'setprefix')) {
@@ -260,6 +260,54 @@ client.on('message', (msg) => {
         msg.channel.send('An error has occurred! Please try again.');
       }
     }
+    else if (msg.content.toLowerCase().startsWith(prefix + 'info')) {
+      msg.channel.send({embed: {
+          title: "Vapor Stats",
+          color: '0x' + msg.guild.me.displayHexColor.substring(1),
+          author: {
+              name: msg.author.tag,
+              icon_url: msg.author.avatarURL()
+          },
+          thumbnail: {
+              url: client.user.avatarURL()
+          },
+          fields: [
+              {
+                  name: "Guild Count: **" + client.guilds.cache.size + "**",
+                  value: "*.*"
+              },
+              {
+                  name: "Vapor Silver Guild Count: **0**",
+                  value: "*.*"
+              },
+              {
+                  name: "Vapor Gold Guild Count: **0**",
+                  value: "*.*"
+              },
+              {
+                  name: "Developer Accounts: **" + botDevelopers.length + "**",
+                  value: "*.*"
+              },
+              {
+                  name: "This Guild's Type: **Bronze**",
+                  value: "*.*"
+              }
+          ],
+          timestamp: new Date()
+      }});
+    }
+    else if (msg.content.toLowerCase().startsWith(prefix + 'passwordprotect')) {
+      if(!msg.member.hasPermission('ADMINISTRATOR') || !botDevelopers.includes(msg.member.id)) {
+        msg.channel.send('You have to be an administator to do this!');
+        return;
+      }
+      msg.channel.send('Please enter the channel where you want to accept passwords:');
+      msg.channel.awaitMessages(m => m.author.id == msg.author.id, {max: 1, time: 60000}) .then(collected => {
+        msg.channel.send(collected.first().content);
+      }) .catch(() => {
+        msg.channel.send('Operation timed out.');
+      });
+    }
     else if (msg.content.toLowerCase().startsWith(prefix + 'dev')) {
       if(!botDevelopers.includes(msg.member.id)) {
         return;
@@ -352,6 +400,9 @@ client.on('message', (msg) => {
             message += '<@' + botDevelopers[i] + '> | ID: ' + botDevelopers[i] + '\n';
           }
           msg.channel.send(message);
+          break;
+        case 'shutdown':
+          client.destroy();
           break;
         case 'help':
           msg.channel.send({ embed: {
