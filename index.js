@@ -2,7 +2,7 @@
 
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -247,12 +247,12 @@ client.on('message', (msg) => {
             });
           }
           msg.channel.messages.fetch({limit: ((purgeAmount / 100) % 1 * 100)}) .then((messages) => {
-            messages.forEach(message => message.delete()) .catch(err);
+            msg.channel.bulkDelete(messages) .catch(err);
           });
           msg.channel.send('Successfully deleted ' + purgeAmount + ' messages!');
         } else {
           msg.channel.messages.fetch({limit: purgeAmount}) .then((messages) => {
-            messages.forEach(message => message.delete()) .catch(err);
+            msg.channel.bulkDelete(messages) .catch(err);
           });
           msg.channel.send('Successfully deleted ' + purgeAmount + ' messages!');
         }
