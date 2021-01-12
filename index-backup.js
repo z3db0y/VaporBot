@@ -243,11 +243,11 @@ client.on('message', (msg) => {
           var runAmount = Math.floor(purgeAmount/100);
           for(var i = 0; i < runAmount; i++) {
             msg.channel.messages.fetch( {limit: 100} ) .then((messages) => {
-              messages.forEach(message => message.delete()) .catch(err);
+              messages.forEach(message => message.delete()) .catch(err => {});
             });
           }
           msg.channel.messages.fetch({limit: ((purgeAmount / 100) % 1 * 100)}) .then((messages) => {
-            msg.channel.bulkDelete(messages) .catch(err);
+            msg.channel.bulkDelete(messages) .catch(err => {});
           });
           msg.channel.send('Successfully deleted ' + purgeAmount + ' messages!');
         } else {
