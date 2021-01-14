@@ -186,9 +186,9 @@ client.on('message', (msg) => {
            fs.writeFileSync(filename, JSON.stringify(guildData, null, 2));
            msg.channel.send("Server store updated!");
          }
-         catch (err) {
+         catch (err => {
            msg.channel.send("Invalid link provided! Please re-execute the command and input a valid link.");
-         }
+         });
        }) .catch((err) => {msg.channel.send('Operation timed out.')});
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'rainbowrole')) {
@@ -215,7 +215,7 @@ client.on('message', (msg) => {
           msg.channel.send('Enabled rainbow role for ' + msg.content.substring(prefix.length+12, prefix.length+33) + '>!');
           fs.writeFileSync(filename, JSON.stringify(guildData, null, 2));
       })
-      .catch( (err) => {
+      .catch((err) => {
           if(err.message === "Missing Permissions") {
             msg.channel.send('Sorry, I don\'t have permission to do that!');
           } else {
@@ -256,9 +256,9 @@ client.on('message', (msg) => {
           });
           msg.channel.send('Successfully deleted ' + purgeAmount + ' messages!');
         }
-      } catch (err) {
+      } catch (err => {
         msg.channel.send('An error has occurred! Please try again.');
-      }
+      });
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'info')) {
       msg.channel.send({embed: {
