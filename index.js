@@ -341,7 +341,7 @@ client.on('message', (msg) => {
               botSettings.botDevelopers = botDevelopers;
               fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings,null,2));
               msg.channel.send('Added user as bot developer!');
-            } else if(/^<!@/.test(args[1])) {
+            } else if(/^\<\!\@/.test(args[1])) {
               botDevelopers.push(args[1].substring(3,args[1].length-1));
               let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
               if(botSettings.botDevelopers.includes(args[1].substring(3,args[1].length-1))) {
@@ -351,7 +351,7 @@ client.on('message', (msg) => {
               botSettings.botDevelopers = botDevelopers;
               fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings,null,2));
               msg.channel.send('Added user as bot developer!');
-            } else if(/^<@/.test(args[1])) {
+            } else if(/^\<\@/.test(args[1])) {
               botDevelopers.push(args[1].substring(2,args[1].length-1));
               let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
               if(botSettings.botDevelopers.includes(args[1].substring(2,args[1].length-1))) {
@@ -389,7 +389,7 @@ client.on('message', (msg) => {
                   return;
                 }
               }
-            } else if(/^<!@/.test(args[1])) {
+            } else if(/^\<\!\@/.test(args[1])) {
               let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
               if(!botSettings.botDevelopers.includes(args[1].substring(3,args[1].length-1))) {
                 msg.channel.send('User is not a bot devleoper!');
@@ -403,7 +403,7 @@ client.on('message', (msg) => {
                   return;
                 }
               }
-            } else if(/^<@/.test(args[1])) {
+            } else if(/^\<\@/.test(args[1])) {
               let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
               if(!botSettings.botDevelopers.includes(args[1].substring(2,args[1].length-1))) {
                 msg.channel.send('User is not a bot devleoper!');
