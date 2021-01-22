@@ -125,8 +125,8 @@ client.on('message', (msg) => {
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'ban')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
-        msg.channel.send('You have to be an administator to do this!');
         if(!botDevelopers.includes(msg.member.id)) {
+          msg.channel.send('You have to be an administator to do this!');
           return;
         }
       }
@@ -165,8 +165,8 @@ client.on('message', (msg) => {
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'setstore')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
-        msg.channel.send('You have to be an administator to do this!');
         if(!botDevelopers.includes(msg.member.id)) {
+          msg.channel.send('You have to be an administator to do this!');
           return;
         }
       }
@@ -229,8 +229,8 @@ client.on('message', (msg) => {
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'purge')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
-        msg.channel.send('You have to be an administator to do this!');
         if(!botDevelopers.includes(msg.member.id)) {
+          msg.channel.send('You have to be an administator to do this!');
           return;
         }
       }
@@ -304,8 +304,8 @@ client.on('message', (msg) => {
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'passwordprotect')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
-        msg.channel.send('You have to be an administator to do this!');
         if(!botDevelopers.includes(msg.member.id)) {
+          msg.channel.send('You have to be an administator to do this!');
           return;
         }
       }
