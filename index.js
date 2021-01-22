@@ -2,7 +2,7 @@
 
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -124,10 +124,12 @@ client.on('message', (msg) => {
         }
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'ban')) {
-        if(!msg.member.hasPermission('ADMINISTRATOR') || !botDevelopers.includes(msg.member.id)) {
-            msg.channel.send('You need administrator to use this command!');
-            return;
+      if(!msg.member.hasPermission('ADMINISTRATOR')) {
+        msg.channel.send('You have to be an administator to do this!');
+        if(!botDevelopers.includes(msg.member.id)) {
+          return;
         }
+      }
         msg.channel.send( { embed: {
             title: "Please tag the user or input their ID below.",
             color: `0x${msg.guild.me.displayHexColor.substring(1)}`
@@ -162,10 +164,12 @@ client.on('message', (msg) => {
         }
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'setstore')) {
-       if(!msg.member.hasPermission('ADMINISTRATOR') || !botDevelopers.includes(msg.member.id)) {
-          msg.channel.send('You need administrator to use this command!');
+      if(!msg.member.hasPermission('ADMINISTRATOR')) {
+        msg.channel.send('You have to be an administator to do this!');
+        if(!botDevelopers.includes(msg.member.id)) {
           return;
-       }
+        }
+      }
        msg.channel.send({ embed: {
            title: "Please enter the link to your server store below... (Start with \"http:\/\/\")",
            color: `0x${msg.guild.me.displayHexColor.substring(1)}`
@@ -188,7 +192,7 @@ client.on('message', (msg) => {
          }
          catch (err) {
            msg.channel.send("Invalid link provided! Please re-execute the command and input a valid link.");
-         }
+         };
        }) .catch((err) => {msg.channel.send('Operation timed out.')});
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'rainbowrole')) {
@@ -215,7 +219,7 @@ client.on('message', (msg) => {
           msg.channel.send('Enabled rainbow role for ' + msg.content.substring(prefix.length+12, prefix.length+33) + '>!');
           fs.writeFileSync(filename, JSON.stringify(guildData, null, 2));
       })
-      .catch( (err) => {
+      .catch((err) => {
           if(err.message === "Missing Permissions") {
             msg.channel.send('Sorry, I don\'t have permission to do that!');
           } else {
@@ -224,9 +228,11 @@ client.on('message', (msg) => {
       });
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'purge')) {
-      if(!msg.member.hasPermission('ADMINISTRATOR') || !botDevelopers.includes(msg.member.id)) {
-        msg.channel.send('You need administrator permissions to do this!');
-        return;
+      if(!msg.member.hasPermission('ADMINISTRATOR')) {
+        msg.channel.send('You have to be an administator to do this!');
+        if(!botDevelopers.includes(msg.member.id)) {
+          return;
+        }
       }
       if(msg.content.length < prefix.length+7) {
         msg.channel.send('Usage: ' + prefix + 'purge <number>');
@@ -258,7 +264,7 @@ client.on('message', (msg) => {
         }
       } catch (err) {
         msg.channel.send('An error has occurred! Please try again.');
-      }
+      };
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'info')) {
       msg.channel.send({embed: {
@@ -297,9 +303,11 @@ client.on('message', (msg) => {
       }});
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'passwordprotect')) {
-      if(!msg.member.hasPermission('ADMINISTRATOR') || !botDevelopers.includes(msg.member.id)) {
+      if(!msg.member.hasPermission('ADMINISTRATOR')) {
         msg.channel.send('You have to be an administator to do this!');
-        return;
+        if(!botDevelopers.includes(msg.member.id)) {
+          return;
+        }
       }
       msg.channel.send('Please enter the channel where you want to accept passwords:');
       msg.channel.awaitMessages(m => m.author.id == msg.author.id, {max: 1, time: 60000}) .then(collected => {
