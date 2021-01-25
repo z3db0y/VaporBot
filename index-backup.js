@@ -2,7 +2,7 @@
 
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.BETA;
+const BOT_CHANNEL = botChannels.STABLE;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -345,7 +345,7 @@ client.on('message', (msg) => {
               msg.channel.send('Added user as bot developer!');
             } else if(/^\<\@/.test(args[1])) {
               let userId;
-              if(args[1].startsWith('!')) {
+              if(args[1].substring(2).startsWith('!')) {
                 userId = args[1].substring(3, args[1].length-1);
               } else { userId = args[1].substring(2, args[1].length-1); }
               botDevelopers.push(userId);
