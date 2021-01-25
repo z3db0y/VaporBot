@@ -333,7 +333,7 @@ client.on('message', (msg) => {
           break;
         case 'add':
           if(args.length > 1) {
-            if(/^[0-9]/.test(args[1])) {
+            if(/^[0-9]*$/.test(args[1])) {
               botDevelopers.push(args[1]);
               let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
               if(botSettings.botDevelopers.includes(args[1])) {
@@ -377,7 +377,7 @@ client.on('message', (msg) => {
               msg.channel.send('You can\'t remove developer permissions from the owner of the bot!');
               return;
             }
-            if(/^[0-9]/.test(args[1])) {
+            if(/^[0-9]*$/.test(args[1])) {
               let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
               if(!botSettings.botDevelopers.includes(args[1])) {
                 msg.channel.send('User is not a bot developer!');
