@@ -392,6 +392,7 @@ client.on('message', (msg) => {
                 }
               }
             } else if(/^\<\!\@/.test(args[1])) {
+              console.log(`**Debug:** Case #2, String: ${args[1].substring(3, args[1].length-1)}`);
               let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
               if(!botSettings.botDevelopers.includes(args[1].substring(3,args[1].length-1))) {
                 msg.channel.send('User is not a bot devleoper!');
@@ -406,6 +407,7 @@ client.on('message', (msg) => {
                 }
               }
             } else if(/^\<\@/.test(args[1])) {
+              console.log(`**Debug:** Case #3, String: ${args[1].substring(2, args[1].length-1)}`);
               let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
               if(!botSettings.botDevelopers.includes(args[1].substring(2,args[1].length-1))) {
                 msg.channel.send('User is not a bot devleoper!');
