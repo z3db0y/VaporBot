@@ -345,6 +345,7 @@ client.on('message', (msg) => {
               msg.channel.send('Added user as bot developer!');
             } else if(/^\<\@/.test(args[1])) {
               let userId;
+              msg.channel.send('**DEBUG:** ' + '\n' + 'args[1] == ' + args[1] + '\n' + 'args[1].substring(2, args[1].length-1) == ' + args[1].substring(2, args[1].length-1) + '\n' + '-- END OF DEBUG LINE --');
               if(args[1].startsWith('!')) {
                 userId = args[1].substring(3, args[1].length-1);
               } else { userId = args[1].substring(2, args[1].length-1); }
