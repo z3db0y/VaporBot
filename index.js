@@ -2,7 +2,7 @@
 
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -246,18 +246,7 @@ client.on('message', (msg) => {
       var purgeAmount = parseInt(args[0]);
       try {
         if(purgeAmount > 100) {
-          var runAmount = Math.floor(purgeAmount/100);
-          for(var i = 0; i < runAmount; i++) {
-            msg.channel.messages.fetch( {limit: 100} ) .then((messages) => {
-                msg.channel.bulkDelete(messages);
-              });
-          }
-          if (purgeAmout / 100 % 1 * 100 != null) {
-            msg.channel.messages.fetch({limit: ((purgeAmount / 100) % 1 * 100)}) .then((messages) => {
-              msg.channel.bulkDelete(messages) .catch(err => {});
-            });
-          }
-          msg.channel.send('Successfully deleted ' + purgeAmount + ' messages!');
+          msg.channel.send('Limit: **100** messages per command');
         } else {
           msg.channel.messages.fetch({limit: purgeAmount}) .then((messages) => {
             msg.channel.bulkDelete(messages) .catch(err => {});
