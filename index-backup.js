@@ -260,7 +260,7 @@ client.on('message', (msg) => {
           msg.channel.send('Successfully deleted ' + purgeAmount + ' messages!');
         } else {
           msg.channel.messages.fetch({limit: purgeAmount}) .then((messages) => {
-            msg.channel.bulkDelete(messages) .catch(err);
+            msg.channel.bulkDelete(messages) .catch(err => {});
           });
           msg.channel.send('Successfully deleted ' + purgeAmount + ' messages!');
         }
