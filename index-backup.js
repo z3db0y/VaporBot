@@ -180,9 +180,9 @@ client.on('message', (msg) => {
         if(userId.startsWith('!')) userId = userId.substring(1);
         let isBanned;
         msg.guild.fetchBans().then(bans => {
-          if(bans.get(userId)) {
-            isBanned=true
-          } else isBanned=false
+          if(bans.get(userId) == null) {
+            isBanned=false
+          } else isBanned=true
         });
         if(isBanned) {
           if(reason) {
@@ -196,9 +196,9 @@ client.on('message', (msg) => {
       } else if(/^[0-9]*$/.test(user)) {
         let isBanned;
         msg.guild.fetchBans().then(bans => {
-          if(bans.get(user)) {
-            isBanned=true
-          } else isBanned=false
+          if(bans.get(user) == null) {
+            isBanned=false
+          } else isBanned=true
         });
         if(isBanned) {
           if(reason) {
