@@ -2,7 +2,7 @@
 
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -184,32 +184,21 @@ client.on('message', (msg) => {
             isBanned=false
           } else isBanned=true
         });
-        if(isBanned) {
-          if(reason) {
-            msg.guild.members.unban(userId, reason) .then(() => {
-              msg.channel.send(`Unbanned **<@${userId}>** (${userId}) with reason **${reason}**!`);
-            }) .catch(err => {});
-          } else msg.guild.members.unban(userId, `Unbanned by ${msg.author.tag}`) .then(() => {
-            msg.channel.send(`Unbanned **<@${userId}>** (${userId}) with reason **Unbanned by ${msg.author.tag}**!`);
+        if(reason) {
+          msg.guild.members.unban(userId, reason) .then(() => {
+            msg.channel.send(`Unbanned **<@${userId}>** (${userId}) with reason **${reason}**!`);
           }) .catch(err => {});
-        } else msg.channel.send('User is not banned!');
+        } else msg.guild.members.unban(userId, `Unbanned by ${msg.author.tag}`) .then(() => {
+          msg.channel.send(`Unbanned **<@${userId}>** (${userId}) with reason **Unbanned by ${msg.author.tag}**!`);
+        }) .catch(err => {});
       } else if(/^[0-9]*$/.test(user)) {
-        let isBanned;
-        msg.guild.fetchBans().then(bans => {
-          if(bans.find(o => o.user.id === user)) {
-            isBanned=true
-          }
-          else isBanned=false
-        });
-        if(isBanned) {
-          if(reason) {
-            msg.guild.members.unban(user, reason) .then(() => {
-              msg.channel.send(`Unbanned **<@${user}>** (${user}) with reason **${reason}**!`);
-            }) .catch(err => {});
-          } else msg.guild.members.unban(user, `Unbanned by ${msg.author.tag}`) .then(() => {
-            msg.channel.send(`Unbanned **<@${user}>** (${user}) with reason **Unbanned by ${msg.author.tag}**!`);
-          }) .catch(err => {});
-        } else msg.channel.send('User is not banned!');
+        if(reason) {
+          msg.guild.members.unban(user, reason) .then(() => {
+            msg.channel.send(`Unbanned **<@${user}>** (${user}) with reason **${reason}**!`);
+          }) .catch(err => console.log(err.message));
+        } else msg.guild.members.unban(user, `Unbanned by ${msg.author.tag}`) .then(() => {
+          msg.channel.send(`Unbanned **<@${user}>** (${user}) with reason **Unbanned by ${msg.author.tag}**!`);
+        }) .catch(err => console.log(err.message));
       } else {
         msg.channel.send('Invalid user provided!');
       }
