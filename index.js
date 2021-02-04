@@ -2,7 +2,7 @@
 
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -187,18 +187,18 @@ client.on('message', (msg) => {
         if(reason) {
           msg.guild.members.unban(userId, reason) .then(() => {
             msg.channel.send(`Unbanned **<@${userId}>** (${userId}) with reason **${reason}**!`);
-          }) .catch(err => {});
+          }) .catch(err => { if(err.message === 'Unknown Ban') { msg.channel.send('User is not banned!') }});
         } else msg.guild.members.unban(userId, `Unbanned by ${msg.author.tag}`) .then(() => {
           msg.channel.send(`Unbanned **<@${userId}>** (${userId}) with reason **Unbanned by ${msg.author.tag}**!`);
-        }) .catch(err => {});
+        }) .catch(err => { if(err.message === 'Unknown Ban') { msg.channel.send('User is not banned!') }});
       } else if(/^[0-9]*$/.test(user)) {
         if(reason) {
           msg.guild.members.unban(user, reason) .then(() => {
             msg.channel.send(`Unbanned **<@${user}>** (${user}) with reason **${reason}**!`);
-          }) .catch(err => console.log(err.message));
+          }) .catch(err => { if(err.message === 'Unknown Ban') { msg.channel.send('User is not banned!') }});
         } else msg.guild.members.unban(user, `Unbanned by ${msg.author.tag}`) .then(() => {
           msg.channel.send(`Unbanned **<@${user}>** (${user}) with reason **Unbanned by ${msg.author.tag}**!`);
-        }) .catch(err => console.log(err.message));
+        }) .catch(err => { if(err.message === 'Unknown Ban') { msg.channel.send('User is not banned!') }});
       } else {
         msg.channel.send('Invalid user provided!');
       }
