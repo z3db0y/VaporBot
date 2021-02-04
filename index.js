@@ -2,7 +2,7 @@
 
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -197,7 +197,7 @@ client.on('message', (msg) => {
         let isBanned;
         msg.guild.fetchBans().then(bans => {
           console.log('\x1b[31m[Debug] \x1b[0m' + JSON.stringify(bans, null, 2));
-          if(bans.find(o => o.user === user)) {
+          if(bans.find(o => o.user.id === user)) {
             isBanned=true
           }
           else isBanned=false
