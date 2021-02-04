@@ -195,7 +195,7 @@ client.on('message', (msg) => {
       } else if(/^[0-9]*$/.test(user)) {
         let isBanned;
         msg.guild.fetchBans().then(bans => {
-          if(bans.get(userId)) isBanned=true
+          if(bans.get(user)) isBanned=true
           else isBanned=false
         });
         if(isBanned) {
