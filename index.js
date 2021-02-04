@@ -2,7 +2,7 @@
 
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -202,6 +202,29 @@ client.on('message', (msg) => {
       } else {
         msg.channel.send('Invalid user provided!');
       }
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'kick')) {
+      if(!msg.member.hasPermission('ADMINISTRATOR')) {
+        if(!botDevelopers.includes(msg.member.id)) {
+          msg.channel.send('You have to be an administator to do this!');
+          return;
+        }
+      }
+      let args = msg.content.split(' ');
+      let userID = args[1].replace('<@!', '').replace('<@').replace('>', '');
+      if(!/^[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
+      let newArgs = args;
+      let reason;
+      if(args.length > 2) {
+        newArgs.splice(0, 2);
+        reason = newArgs.join(' ');
+      }
+
+      msg.guild.members.cache.get(userID).kick(reason ? reason : `Kicked by ${msg.author.tag}`) .then(() => {
+        msg.channel.send(`Kicked **<@${userID}>** (${userID}) with reason **${reason ? reason : `Kicked by ${msg.author.tag}`}**!`);
+      }) .catch(err => {
+        msg.channel.send('Couldn\'t kick user! ' + err.message);
+      });
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'store')) {
         if(JSON.parse(fs.readFileSync(filename)).store == null) {
