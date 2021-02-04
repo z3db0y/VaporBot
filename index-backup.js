@@ -79,6 +79,14 @@ client.on('message', (msg) => {
                     value: "Bans a user."
                 },
                 {
+                    name: prefix + "unban",
+                    value: "Unbans a user."
+                },
+                {
+                    name: prefix + "kick",
+                    value: "Kicks a user."
+                },
+                {
                     name: prefix + "store",
                     value: "Link to server store."
                 },
