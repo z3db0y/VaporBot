@@ -178,7 +178,11 @@ client.on('message', (msg) => {
       if(/^<@/.test(user)) {
         let userId = user.substring(2, user.length-1);
         if(userId.startsWith('!')) userId = userId.substring(1);
-        let isBanned = (msg.guild.fetchBans().find(u => u.id == user.id));
+        let isBanned;
+        msg.guild.fetchBans().then(bans => {
+          if(bans.get(userId)) isBanned=true
+          else isBanned=false
+        });
         if(isBanned) {
           if(reason) {
             msg.guild.members.unban(userId, reason) .then(() => {
@@ -189,7 +193,11 @@ client.on('message', (msg) => {
           }) .catch(err => {});
         } else msg.channel.send('User is not banned!');
       } else if(/^[0-9]*$/.test(user)) {
-        let isBanned = (msg.guild.fetchBans().find(u => u.id == user.id));
+        let isBanned;
+        msg.guild.fetchBans().then(bans => {
+          if(bans.get(userId)) isBanned=true
+          else isBanned=false
+        });
         if(isBanned) {
           if(reason) {
             msg.guild.members.unban(user, reason) .then(() => {
