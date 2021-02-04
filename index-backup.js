@@ -197,7 +197,9 @@ client.on('message', (msg) => {
         let isBanned;
         msg.guild.fetchBans().then(bans => {
           console.log('\x1b[31m[Debug] \x1b[0m' + JSON.stringify(bans, null, 2));
-          if(bans.find(o => o.user === user)) isBanned=true
+          if(bans.find(o => o.user === user)) {
+            isBanned=true
+          }
           else isBanned=false
         });
         if(isBanned) {
