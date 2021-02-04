@@ -219,12 +219,16 @@ client.on('message', (msg) => {
         newArgs.splice(0, 2);
         reason = newArgs.join(' ');
       }
-
-      msg.guild.members.cache.get(userID).kick(reason ? reason : `Kicked by ${msg.author.tag}`) .then(() => {
-        msg.channel.send(`Kicked **<@${userID}>** (${userID}) with reason **${reason ? reason : `Kicked by ${msg.author.tag}`}**!`);
-      }) .catch(err => {
-        msg.channel.send('Couldn\'t kick user! ' + err.message);
-      });
+      try{
+        msg.guild.members.cache.get(userID).kick(reason ? reason : `Kicked by ${msg.author.tag}`) .then(() => {
+          msg.channel.send(`Kicked **<@${userID}>** (${userID}) with reason **${reason ? reason : `Kicked by ${msg.author.tag}`}**!`);
+        }) .catch(err => {
+          msg.channel.send('Couldn\'t kick user! ' + err.message);
+        });
+      } catch (error) {
+        msg.channel.send('Couldn\'t kick user!');
+      }
+      
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'store')) {
         if(JSON.parse(fs.readFileSync(filename)).store == null) {
