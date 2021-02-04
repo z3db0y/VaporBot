@@ -133,7 +133,11 @@ client.on('message', (msg) => {
       let args = msg.content.split(' ');
       let user = args[1];
       let reason;
-      if(args.length > 2) reason = args.splice(0, 2).join(' ');
+      if(args.length > 2) {
+        let newArgs = args;
+        newArgs.splice(0, 2);
+        reason = newArgs.join(' ');
+      }
       if(/^<@/.test(user)) {
         let userId = user.substring(2, user.length-1);
         if (userId.startsWith('!')) userId = userId.substring(1);
