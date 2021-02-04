@@ -2,7 +2,7 @@
 
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -195,7 +195,7 @@ client.on('message', (msg) => {
       } else if(/^[0-9]*$/.test(user)) {
         let isBanned;
         msg.guild.fetchBans().then(bans => {
-          if(bans.get(userId)) isBanned=true
+          if(bans.get(user)) isBanned=true
           else isBanned=false
         });
         if(isBanned) {
