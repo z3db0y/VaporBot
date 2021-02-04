@@ -2,7 +2,7 @@
 
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -124,32 +124,13 @@ client.on('message', (msg) => {
         }
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'ban')) {
-      if(!msg.member.hasPermission('ADMINISTRATOR')) {
+      /*if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
           msg.channel.send('You have to be an administator to do this!');
           return;
         }
-      }
-        msg.channel.send( { embed: {
-            title: "Please tag the user or input their ID below.",
-            color: `0x${msg.guild.me.displayHexColor.substring(1)}`
-        } } );
-        msg.channel.awaitMessages(m => m.author.id === msg.author.id, {max: 1, time: 60000}) .then((collected) => {
-            if(collected.first().content.startsWith('<@!')) {
-                msg.guild.members.ban(collected.first().content.substring(3, collected.first().content.length-1), {reason: `Banned by ${msg.author.tag} using Vapor.`});
-                msg.channel.send(`**User ${collected.first().content} banned!**`);
-            }
-            else {
-                msg.guild.members.ban(collected.first().content, {reason: `Banned by ${msg.author.tag} using Vapor.`}) .then(() => {
-                    msg.channel.send(`**User <@!${collected.first().content}> banned!**`);
-                }) .catch((err) => {
-                    msg.channel.send('Invalid ID or Tag!');
-                    return;
-                });
-            }
-        }) .catch((err) => {
-            msg.channel.send('Operation timed out.');
-        });
+      }*/
+      msg.channel.send('Command re-work is under way! Please check back later');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'store')) {
         if(JSON.parse(fs.readFileSync(filename)).store == null) {
@@ -164,36 +145,13 @@ client.on('message', (msg) => {
         }
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'setstore')) {
-      if(!msg.member.hasPermission('ADMINISTRATOR')) {
+      /*if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
           msg.channel.send('You have to be an administator to do this!');
           return;
         }
-      }
-       msg.channel.send({ embed: {
-           title: "Please enter the link to your server store below... (Start with \"http:\/\/\")",
-           color: `0x${msg.guild.me.displayHexColor.substring(1)}`
-       }  });
-       msg.channel.awaitMessages(m => m.author == msg.author, {max :1, time: 60000}) .then((collected) => {
-         let urlString = collected.first().content;
-         if(urlString == "none") {
-           let guildData = JSON.parse(fs.readFileSync(filename));
-           guildData.store = null;
-           fs.writeFileSync(filename, JSON.stringify(guildData, null, 2));
-           msg.channel.send("Server store reset!");
-           return;
-         }
-         try {
-           new URL(urlString);
-           let guildData = JSON.parse(fs.readFileSync(filename));
-           guildData.store = urlString;
-           fs.writeFileSync(filename, JSON.stringify(guildData, null, 2));
-           msg.channel.send("Server store updated!");
-         }
-         catch (err) {
-           msg.channel.send("Invalid link provided! Please re-execute the command and input a valid link.");
-         };
-       }) .catch((err) => {msg.channel.send('Operation timed out.')});
+      }*/
+      msg.channel.send('Command re-work is under way! Please check back later');
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'rainbowrole')) {
       if(!botDevelopers.includes(msg.member.id)) {
