@@ -386,15 +386,6 @@ client.on('message', (msg) => {
               msg.channel.send('You can\'t remove developer permissions from the owner of the bot!');
               return;
             }
-     
-          }
-          break;
-        case 'remove':
-          if(args.length > 1) {
-            if(args[1] == '740167253491843094' || args[1].substring(2,args[1].length-1) == '740167253491843094') {
-              msg.channel.send('You can\'t remove developer permissions from the owner of the bot!');
-              return;
-            }
             if(/^[0-9]*$/.test(args[1])) {
               let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
               if(!botSettings.botDevelopers.includes(args[1])) {
