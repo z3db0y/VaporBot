@@ -111,13 +111,12 @@ client.on('message', (msg) => {
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'setprefix')) {
         if(msg.member.hasPermission('ADMINISTRATOR') || botDevelopers.includes(msg.member.id)) {
-            if(msg.content.toLowerCase().substring(prefix.length + 9).startsWith(' ')) {
-                let rawData = JSON.parse(fs.readFileSync(filename));
-                rawData.prefix = msg.content.substring(prefix.length + 10);
-                fs.writeFileSync(filename, JSON.stringify(rawData, null, 2));
-                console.log(`\x1b[35m[GuildManager]\x1b[32m ${msg.guild.name}\x1b[0m has updated their prefix to \x1b[32m${JSON.parse(fs.readFileSync(filename)).prefix}\x1b[0m`);
-                msg.channel.send('Prefix updated!');
-            }
+            let args = msg.content.split(' ');
+            let rawData = JSON.parse(fs.readFileSync(filename));
+            args.splice(0, 1);
+            let newPrefix = args.join(' ');
+            rawData.prefix = newPrefix;
+            fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(rawData, null, 2));
         }
         else {
             msg.channel.send('You need administrator to use this command!');
