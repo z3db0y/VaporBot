@@ -2,7 +2,7 @@
 
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.BETA;
+const BOT_CHANNEL = botChannels.STABLE;
 
 require('dotenv').config();
 const Discord = require('discord.js');
