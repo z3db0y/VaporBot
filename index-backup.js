@@ -142,12 +142,20 @@ client.on('message', (msg) => {
         let userId = user.substring(2, user.length-1);
         if (userId.startsWith('!')) userId = userId.substring(1);
         if(reason) {
-          msg.guild.members.ban(userId, {reason: reason});
-        } else msg.guild.members.ban(userId, {reason: `Banned by ${msg.author.tag}`});
+          msg.guild.members.ban(userId, {reason: reason}) .then(() => {
+            msg.channel.send(`Banned **<@${userId}>** (${userId}) with reason **${reason}**!`);
+          }) .catch(err => {});
+        } else msg.guild.members.ban(userId, {reason: `Banned by ${msg.author.tag}`}) .then(() => {
+          msg.channel.send(`Banned **<@${userId}>** (${userId}) with reason **Banned by ${msg.author.tag}**!`);
+        }) .catch(err => {});
       } else if(/^[0-9]*$/.test(user)) {
         if(reason) {
-          msg.guild.members.ban(user, {reason: reason});
-        } else msg.guild.members.ban(user, {reason: `Banned by ${msg.author.tag}`});
+          msg.guild.members.ban(user, {reason: reason}) .then(() => {
+            msg.channel.send(`Banned **<@${user}>** (${user}) with reason **${reason}**!`);
+          }) .catch(err => {});
+        } else msg.guild.members.ban(user, {reason: `Banned by ${msg.author.tag}`}) .then(() => {
+          msg.channel.send(`Banned **<@${user}>** (${user}) with reason **Banned by ${msg.author.tag}**!`);
+        }) .catch(err => {});
       } else {
         msg.channel.send('Invalid user provided!');
       }
