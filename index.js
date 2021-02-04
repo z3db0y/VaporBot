@@ -2,7 +2,7 @@
 
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -124,13 +124,25 @@ client.on('message', (msg) => {
         }
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'ban')) {
-      /*if(!msg.member.hasPermission('ADMINISTRATOR')) {
+      if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
           msg.channel.send('You have to be an administator to do this!');
           return;
         }
-      }*/
-      msg.channel.send('Command re-work is under way! Please check back later');
+      }
+      let args = msg.content.split(' ');
+      let user = args[1];
+      let reason;
+      if(args.length > 2) args.splice(0, 2).join(' ');
+      if(/^<@/.test(user)) {
+        let userId = user.substring(2, user.length-1);
+        if (userId.startsWith('!')) userId = userId.substring(1);
+        if(reason) {
+          msg.guild.members.ban(userId, {reason: reason});
+        } else msg.guild.members.ban(userId, {reason: `Banned by ${msg.author.tag}`});
+      } else {
+        msg.channel.send('Invalid user provided!');
+      }
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'store')) {
         if(JSON.parse(fs.readFileSync(filename)).store == null) {
@@ -152,6 +164,7 @@ client.on('message', (msg) => {
         }
       }*/
       msg.channel.send('Command re-work is under way! Please check back later');
+      // TODO: Re-work setstore command
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'rainbowrole')) {
       if(!botDevelopers.includes(msg.member.id)) {
