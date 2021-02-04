@@ -184,32 +184,21 @@ client.on('message', (msg) => {
             isBanned=false
           } else isBanned=true
         });
-        if(isBanned) {
-          if(reason) {
-            msg.guild.members.unban(userId, reason) .then(() => {
-              msg.channel.send(`Unbanned **<@${userId}>** (${userId}) with reason **${reason}**!`);
-            }) .catch(err => {});
-          } else msg.guild.members.unban(userId, `Unbanned by ${msg.author.tag}`) .then(() => {
-            msg.channel.send(`Unbanned **<@${userId}>** (${userId}) with reason **Unbanned by ${msg.author.tag}**!`);
+        if(reason) {
+          msg.guild.members.unban(userId, reason) .then(() => {
+            msg.channel.send(`Unbanned **<@${userId}>** (${userId}) with reason **${reason}**!`);
           }) .catch(err => {});
-        } else msg.channel.send('User is not banned!');
+        } else msg.guild.members.unban(userId, `Unbanned by ${msg.author.tag}`) .then(() => {
+          msg.channel.send(`Unbanned **<@${userId}>** (${userId}) with reason **Unbanned by ${msg.author.tag}**!`);
+        }) .catch(err => {});
       } else if(/^[0-9]*$/.test(user)) {
-        let isBanned;
-        msg.guild.fetchBans().then(bans => {
-          if(bans.find(o => o.user.id === user)) {
-            isBanned=true
-          }
-          else isBanned=false
-        });
-        if(isBanned) {
-          if(reason) {
-            msg.guild.members.unban(user, reason) .then(() => {
-              msg.channel.send(`Unbanned **<@${user}>** (${user}) with reason **${reason}**!`);
-            }) .catch(err => {});
-          } else msg.guild.members.unban(user, `Unbanned by ${msg.author.tag}`) .then(() => {
-            msg.channel.send(`Unbanned **<@${user}>** (${user}) with reason **Unbanned by ${msg.author.tag}**!`);
-          }) .catch(err => {});
-        } else msg.channel.send('User is not banned!');
+        if(reason) {
+          msg.guild.members.unban(user, reason) .then(() => {
+            msg.channel.send(`Unbanned **<@${user}>** (${user}) with reason **${reason}**!`);
+          }) .catch(err => console.log(err.message));
+        } else msg.guild.members.unban(user, `Unbanned by ${msg.author.tag}`) .then(() => {
+          msg.channel.send(`Unbanned **<@${user}>** (${user}) with reason **Unbanned by ${msg.author.tag}**!`);
+        }) .catch(err => console.log(err.message));
       } else {
         msg.channel.send('Invalid user provided!');
       }
@@ -389,6 +378,15 @@ client.on('message', (msg) => {
           }
           else {
             msg.channel.send('Usage: ' + prefix + 'dev add <UserID>|<UserMention>');
+          }
+          break;
+        case 'remove':
+          if(args.length > 1) {
+            if(args[1] == '740167253491843094' || args[1].substring(2,args[1].length-1) == '740167253491843094') {
+              msg.channel.send('You can\'t remove developer permissions from the owner of the bot!');
+              return;
+            }
+     
           }
           break;
         case 'remove':
