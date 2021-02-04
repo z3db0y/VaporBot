@@ -2,7 +2,7 @@
 
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -77,6 +77,14 @@ client.on('message', (msg) => {
                 {
                     name: prefix + "ban",
                     value: "Bans a user."
+                },
+                {
+                    name: prefix + "unban",
+                    value: "Unbans a user."
+                },
+                {
+                    name: prefix + "kick",
+                    value: "Kicks a user."
                 },
                 {
                     name: prefix + "store",
