@@ -2,7 +2,7 @@
 
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -117,6 +117,7 @@ client.on('message', (msg) => {
             let newPrefix = args.join(' ');
             rawData.prefix = newPrefix;
             fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(rawData, null, 2));
+            msg.channel.send('Prefix set to **' + newPrefix + '**');
         }
         else {
             msg.channel.send('You need administrator to use this command!');
