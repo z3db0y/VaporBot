@@ -7,7 +7,14 @@
   },
   "store": null,
   "rainbowRoles": [],
-  "warnings": [],
+  "warnings": [
+    {
+      "user": "622425350810632192",
+      "warns": [
+        "testy"
+      ]
+    }
+  ],
   "autokick": 0,
   "autoban": 0
 }
