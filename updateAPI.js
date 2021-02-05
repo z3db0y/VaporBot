@@ -9,8 +9,7 @@ function checkUpdate(guildID, client) {
     let files = fs.readdirSync(__dirname + '/releases');
     if(files) {
         files.forEach(file => {
-            console.log('\x1b[31m[Debug] \x1b[0m' + file.replace('.', '').replace('txt', ''));
-            if(/^[0-9]*$/.test(file.replace('.', '').replace('txt', ''))) {
+            if(/^[0-9]*$/.test(file.replace(/\./g, '').replace('txt', ''))) {
                 releases[releases.length] = {
                     filename: file,
                     fileInt: file.replace('.', '').replace('txt', '')
