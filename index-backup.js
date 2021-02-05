@@ -1,7 +1,8 @@
 'use strict';
 
+const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
-
+updateAPI.currentVersion = process.env.CURRENT_VERSION;
 const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
@@ -10,8 +11,6 @@ const client = new Discord.Client();
 const fs = require('fs');
 const GuildAPI = require('./guildAPI');
 const guildAPI = new GuildAPI.GuildAPI();
-const activeVCs = new Map();
-const vcConnectionMap = new Map();
 const { exit } = require('process');
 const RainbowRoleAPI = require('./rainbowRoleAPI');
 const rainbowRoleAPI = new RainbowRoleAPI.RainbowRole();
@@ -30,6 +29,7 @@ client.on('ready', () => {
         console.log('\x1b[35m[Discord] \x1b[0mSet custom status (\x1b[32mSTABLE\x1b[0m)!');
       });
     }
+    updateAPI.init(client);
     client.guilds.cache.forEach((guild) => {
         guildAPI.initialiseGuild(guild);
         rainbowRoleAPI.runRainbowRole(client, guild.id);
@@ -337,6 +337,44 @@ client.on('message', (msg) => {
 
       msg.channel.send(`Warned **<@${userID}>** (${userID}) with reason **${useReason ? reason : "No reason provided."}**!`);
     }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'autokick')) {
+      if(!msg.member.hasPermission('ADMINISTRATOR')) {
+        if(!botDevelopers.includes(msg.member.id)) {
+          msg.channel.send('You have to be an administator to do this!');
+          return;
+        }
+      }
+      let args = msg.content.split(' ');
+      if(args.length < 2) {
+        msg.channel.send('Usage: ' + prefix + 'autokick <Number>');
+        return;
+      }
+      if(!/^[0-9]*$/.test(args[1])) return msg.channel.send('Invalid number!');
+      let autokick = parseInt(args[1]);
+      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+      guildsettings.autokick = autokick;
+      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
+      msg.channel.send(`Set warnings until kick to **${autokick}**!`);
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'autoban')) {
+      if(!msg.member.hasPermission('ADMINISTRATOR')) {
+        if(!botDevelopers.includes(msg.member.id)) {
+          msg.channel.send('You have to be an administator to do this!');
+          return;
+        }
+      }
+      let args = msg.content.split(' ');
+      if(args.length < 2) {
+        msg.channel.send('Usage: ' + prefix + 'autoban <Number>');
+        return;
+      }
+      if(!/^[0-9]*$/.test(args[1])) return msg.channel.send('Invalid number!');
+      let autoban = parseInt(args[1]);
+      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+      guildsettings.autoban = autoban;
+      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
+      msg.channel.send(`Set warnings until kick to **${autoban}**!`);
+    }
     else if(msg.content.toLowerCase().startsWith(prefix + 'store')) {
         if(JSON.parse(fs.readFileSync(filename)).store == null) {
             msg.channel.send('This server has no store');
@@ -567,6 +605,10 @@ client.on('message', (msg) => {
             message += '<@' + botDevelopers[i] + '> | ID: ' + botDevelopers[i] + '\n';
           }
           msg.channel.send(message);
+          break;
+        case 'updatechannel':
+          updateAPI.setUpdateChannel(msg.channel.id);
+          msg.channel.send('This channel will now receive update logs!');
           break;
         case 'shutdown':
           client.destroy();
