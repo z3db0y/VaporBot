@@ -376,7 +376,7 @@ client.on('message', (msg) => {
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       if(!guildsettings.warnings.find(e => e.user === userID)) return msg.channel.send('This user has no warnings!');
       let warnUser = guildsettings.warnings.find(e => e.user === userID);
-      if(args[2] > 0 && args[2] < warnUser.warns.length) {
+      if(args[2] > 0 && args[2] <= warnUser.warns.length) {
         let warnID = args[2]-1;
         warnUser.warns.splice(warnID, 1);
         fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
