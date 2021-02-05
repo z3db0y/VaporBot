@@ -7,6 +7,7 @@ function checkUpdate(guildID, client) {
     if(!guildSettings.updateChannel) return;
     let releases = [];
     fs.readdir('./releases/', (err, files) => {
+        if(err) return console.log(err.message);
         files.forEach(file => {
             console.log(file);
             console.log(file.replace('.', '').replace('txt', ''));
