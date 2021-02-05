@@ -12,7 +12,7 @@ module.exports = {
     },
     init: function (client) {
         client.guilds.cache.forEach((guild) => {
-            setInterval(checkForUpdates(guild.id), 60000);
+            setInterval(this.checkForUpdates(guild.id), 60000);
         });
     },
     checkForUpdates: function (guildID) {
