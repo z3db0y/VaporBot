@@ -8,10 +8,12 @@ function checkUpdate(guildID, client) {
     let releases = [];
     fs.readdir('./releases/', (err, files) => {
         files.forEach(file => {
-            if(fs.statSync(file).isFile) {
-                if(/^[0-9]*$/.test(file.split('.').join('').replace('txt', ''))) releases[releases.length] = {
+            if(fs.statSync(file).isFile()) {
+                console.log(file);
+                console.log(file.replace('.', '').replace('txt', ''));
+                if(/^[0-9]*$/.test(file.replace('.', '').replace('txt', ''))) releases[releases.length] = {
                     filename: file,
-                    fileInt: parseInt(file.split('.').join('').replace('txt'))
+                    fileInt: parseInt(file.replace('.', '').replace('txt'))
                 };
             }
         });
