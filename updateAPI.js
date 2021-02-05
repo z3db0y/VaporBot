@@ -25,7 +25,7 @@ function checkUpdate(guildID, client) {
     let latestRelease = releases.find(e => e.fileInt === largestFileInt).filename;
     if(guildSettings.lastLoggedUpdate == latestRelease) return;
 
-    client.channels.fetch(guildSettings.updateChannel).send({ embed: {
+    client.channels.cache.get(guildSettings.updateChannel).send({ embed: {
         title: `**Version ${latestRelease.replace('.txt', '')} Released!**`,
         thumbnail: {
             url: client.user.avatarURL()
