@@ -257,6 +257,7 @@ client.on('message', (msg) => {
           return;
         }
       }
+      console.log(`\x1b[31m[Debug] \x1b[0m${JSON.stringify(msg.guild.members.cache, null, 2)}`);
       let args = msg.content.split(' ');
       if(args.length < 2) {
         msg.channel.send('Usage: ' + prefix + 'warnings <UserID>|<@User>');
@@ -282,7 +283,7 @@ client.on('message', (msg) => {
           }
         }
         msg.channel.send({ embed: {
-          title: `${msg.guild.members.cache.get(userID).username}'s Warnings`,
+          title: `${msg.guild.members.cache.get(userID)}'s Warnings`,
           thumbnail: {
             url: client.user.avatarURL()
           },
