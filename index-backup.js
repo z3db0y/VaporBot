@@ -281,9 +281,8 @@ client.on('message', (msg) => {
             value: '*.*'
           }
         }
-        let memberName = client.users.resolve(userID).tag;
         msg.channel.send({ embed: {
-          title: `${memberName}'s Warnings`,
+          title: `<@${userID}>'s Warnings`,
           thumbnail: {
             url: client.user.avatarURL()
           },
