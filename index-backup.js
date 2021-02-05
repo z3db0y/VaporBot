@@ -274,15 +274,15 @@ client.on('message', (msg) => {
           if(i != warns.length-1) {
             warnList[warnList.length] = {
               name: `${i+1}. ${warns[i]}\n`,
-              value: '*,*'
+              value: '*.*'
             }
           } else warnList[warnList.length] = {
             name: `${i+1}. ${warns[i]}`,
-            value: '*,*'
+            value: '*.*'
           }
         }
         let memberName;
-        msg.guild.members.fetch() .then(e => {
+        msg.guild.members.fetch().then(e => {
           memberName = e.get(userID).displayName;
         });
         msg.channel.send({ embed: {
