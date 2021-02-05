@@ -7,20 +7,16 @@ function checkUpdate(guildID, client) {
     if(!guildSettings.updateChannel) return;
     let releases = [];
     fs.readdir(__dirname, (err, files) => {
-        if(err) return console.log(err.message);
+        if(err) console.log(err.message);
         files.forEach(file => {
-            console.log(file);
-            if(/^[0-9]*$/.test(file.replace('.', '').replace('txt', ''))) releases[releases.length] = {
-                filename: file,
-                fileInt: parseInt(file.replace('.', '').replace('txt'))
-            };
+            
         });
     });
     var largestFileInt = 0;
     releases.forEach(r => {
         if(r.fileInt > largestFileInt) largestFileInt = r.fileInt;
     });
-    console.log(JSON.stringify(releases, null, 1));
+    if(releases.length == 0) return;
     let latestRelease = releases.find(e => e.fileInt === largestFileInt).filename;
     if(guildSettings.lastLoggedUpdate == latestRelease) return;
 
