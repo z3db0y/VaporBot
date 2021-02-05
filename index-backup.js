@@ -303,6 +303,7 @@ client.on('message', (msg) => {
           return;
         }
       }
+      console.log('\x1b[31m[Debug] ' + JSON.stringify(msg.guild.members, null, 2))
       let args = msg.content.split(' ');
       if(args.length < 2) {
         msg.channel.send('Usage: ' + prefix + 'warnings <UserID>|<@User>');
