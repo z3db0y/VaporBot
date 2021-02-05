@@ -24,7 +24,7 @@ client.on('ready', () => {
       });
     }
     else if (BOT_CHANNEL == 1) {
-      client.user.setPresence({activity: {type: "PLAYING", name: "Vapor | v!help"}, status: "online", afk: false})
+      client.user.setPresence({activity: {type: "STREAMING", name: "Vapor | v!help", url: "https://twitch.tv/z3db0y"}, status: "online", afk: false})
       .then(() => {
         console.log('\x1b[35m[Discord] \x1b[0mSet custom status (\x1b[32mSTABLE\x1b[0m)!');
       });
