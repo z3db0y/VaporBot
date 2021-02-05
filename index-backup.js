@@ -283,6 +283,7 @@ client.on('message', (msg) => {
         }
         let memberName;
         msg.guild.members.fetch().then(e => {
+          console.log(JSON.stringify(e, null, 2));
           memberName = e.get(userID).displayName;
         });
         msg.channel.send({ embed: {
