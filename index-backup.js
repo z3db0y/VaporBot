@@ -401,7 +401,6 @@ client.on('message', (msg) => {
         autoban = 0;
       } else autoban = parseInt(args[1]);
       if(autoban < 0) autoban = 0;
-      let autoban = parseInt(args[1]);
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       guildsettings.autoban = autoban;
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
