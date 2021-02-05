@@ -12,7 +12,7 @@ function checkUpdate(guildID, client) {
             if(/^[0-9]*$/.test(file.replace(/\./g, '').replace('txt', ''))) {
                 releases[releases.length] = {
                     filename: file,
-                    fileInt: file.replace('.', '').replace('txt', '')
+                    fileInt: file.replace(/\./g, '').replace('txt', '')
                 }
             }
         });
