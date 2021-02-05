@@ -305,7 +305,7 @@ client.on('message', (msg) => {
       }
       let userID = args[1].replace('<@!', '').replace('<@', '').replace('>', '');
       if(!/^[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
-      if(!msg.guild.members.cache.find(m => m.id === userID)) {
+      if(!msg.guild.members.cache.get(userID)) {
         msg.channel.send('User is not in this guild!');
         return;
       }
@@ -317,21 +317,21 @@ client.on('message', (msg) => {
       }
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       let warnings = guildsettings.warnings;
-      let warnUser = warnings.get(u => u.user === userID);
+      let warnUser = warnings.find(e => e.user === userID);
       if(!warnUser) {
         warnings[warnings.length] = {
           "user": userID,
           "warns": []
         }
-        warnUser = warnings.get(u => u.user === userID);
+        warnUser = warnings.find(e => e.user === userID);
       }
       let useReason = false;
       if(reason) useReason=true;
       warnUser.warns[warnUser.warns.length] = useReason ? reason : "No reason provided.";
       guildsettings.warnings = warnings;
 
-      if(guildsettings.warnings.get(u => u.user === userID).warns.length == guildsettings.autokick) msg.guild.members.cache.get(userID).kick('Auto kick by ' + client.user.tag) .catch(err => {});
-      if(guildsettings.warnings.get(u => u.user === userID).warns.length == guildsettings.autoban) msg.guild.members.cache.get(userID).ban({reason: 'Auto ban by ' + client.user.tag}) .catch(err => {});
+      if(guildsettings.warnings.find(e => e.user === userID).warns.length == guildsettings.autokick) msg.guild.members.cache.get(userID).kick('Auto kick by ' + client.user.tag) .catch(err => {});
+      if(guildsettings.warnings.find(e => e.user === userID).warns.length == guildsettings.autoban) msg.guild.members.cache.get(userID).ban({reason: 'Auto ban by ' + client.user.tag}) .catch(err => {});
 
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
 
