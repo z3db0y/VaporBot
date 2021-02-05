@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -401,7 +401,6 @@ client.on('message', (msg) => {
         autoban = 0;
       } else autoban = parseInt(args[1]);
       if(autoban < 0) autoban = 0;
-      let autoban = parseInt(args[1]);
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       guildsettings.autoban = autoban;
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
