@@ -257,7 +257,7 @@ client.on('message', (msg) => {
           return;
         }
       }
-      console.log(`\x1b[31m[Debug] \x1b[0m${JSON.stringify(msg.guild.members.cache, null, 2)}`);
+      console.log(`\x1b[31m[Debug] \x1b[0m${JSON.stringify(client.users.cache, null, 2)}`);
       let args = msg.content.split(' ');
       if(args.length < 2) {
         msg.channel.send('Usage: ' + prefix + 'warnings <UserID>|<@User>');
@@ -380,7 +380,7 @@ client.on('message', (msg) => {
                   return;
               }
           }
-          guildData.rainbowRoles.push(msg.content.substring(prefix.length+15, prefix.length+33));
+          guildData.rainbowRoles.push(msg.content.tent.substring(prefix.length+15, prefix.length+33));
           msg.channel.send('Enabled rainbow role for ' + msg.content.substring(prefix.length+12, prefix.length+33) + '>!');
           fs.writeFileSync(filename, JSON.stringify(guildData, null, 2));
       })
