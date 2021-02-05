@@ -6,5 +6,8 @@
     "actionsLogged": "none"
   },
   "store": null,
-  "rainbowRoles": []
+  "rainbowRoles": [],
+  "warnings": [],
+  "autokick": 0,
+  "autoban": 0
 }
