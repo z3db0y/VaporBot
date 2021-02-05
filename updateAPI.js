@@ -2,8 +2,37 @@
 const fs = require('fs');
 const { emit } = require('process');
 
-function checkUpdate(guildID) {
+function checkUpdate(guildID, client) {
+    let guildSettings = JSON.parse(fs.readFileSync(`${guildID}.json`));
+    if(!guildSettings.updateChannel) return;
+    let releases = [];
+    fs.readdir('./releases/', (err, files) => {
+        files.forEach(file => {
+            if(fs.statSync(file).isFile) {
+                if(/^[0-9]*$/.test(file.split('.').join('').replace('txt', ''))) releases[releases.length] = {
+                    filename: file,
+                    fileInt: parseInt(file.split('.').join('').replace('txt'))
+                };
+            }
+        });
+    });
+    var largestFileInt = 0;
+    releases.forEach(r => {
+        if(r.fileInt > largestFileInt) largestFileInt = r.fileInt;
+    });
+    let latestRelease = releases.find(e => e.fileInt === largestFileInt).filename;
+    if(guildSettings.lastLoggedUpdate == latestRelease) return;
 
+    client.channels.fetch(guildSettings.updateChannel).send({ embed: {
+        title: `**Version ${latestRelease.replace('.txt', '')} Released!**`,
+        thumbnail: {
+            url: client.user.avatarUrl()
+        },
+        description: `\`\`\`diff\n${fs.readFileSync(latestRelease)}\`\`\``,
+        timestamp: new Date()
+    }});
+    guildSettings.lastLoggedUpdate = latestRelease;
+    fs.writeFileSync(`${guildID}.json`, JSON.stringify(guildSettings, null, 2));
 }
 
 module.exports = {
@@ -13,12 +42,12 @@ module.exports = {
         guildSettings.updateChannel = channelID;
         fs.writeFileSync(`${guildID}.json`, JSON.stringify(guildSettings, null, 2));
     },
-    checkForUpdates: function (guildID) {
-        checkUpdate(guildID);
+    checkForUpdates: function (guildID, client) {
+        checkUpdate(guildID, client);
     },
     init: function (client) {
         client.guilds.cache.forEach((guild) => {
-            setInterval(() => checkUpdate(guild.id), 60000);
+            setInterval(() => checkUpdate(guild.id, client), 60000);
         });
     }
     
