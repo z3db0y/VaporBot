@@ -87,6 +87,26 @@ client.on('message', (msg) => {
                     value: "Kicks a user."
                 },
                 {
+                    name: prefix + "warn",
+                    value: "Warns a user."
+                },
+                {
+                    name: prefix + "delwarn",
+                    value: "Removes a warning for a user."
+                },
+                {
+                    name: prefix + "warnings | " + prefix + "warns",
+                    value: "Shows a user's warnings."
+                },
+                {
+                    name: prefix + "autokick",
+                    value: "Set amount of warnings before a user is automatically kicked from the server."
+                },
+                {
+                    name: prefix + "autoban",
+                    value: "Set amount of warnings before a user is automatically banned from the server."
+                },
+                {
                     name: prefix + "store",
                     value: "Link to server store."
                 },
@@ -337,6 +357,9 @@ client.on('message', (msg) => {
 
       msg.channel.send(`Warned **<@${userID}>** (${userID}) with reason **${useReason ? reason : "No reason provided."}**!`);
     }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'delwarn')) {
+      msg.channel.send('Command is undergoing development. Please check back later.');
+    }
     else if(msg.content.toLowerCase().startsWith(prefix + 'autokick')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
@@ -349,8 +372,12 @@ client.on('message', (msg) => {
         msg.channel.send('Usage: ' + prefix + 'autokick <Number>');
         return;
       }
-      if(!/^[0-9]*$/.test(args[1])) return msg.channel.send('Invalid number!');
-      let autokick = parseInt(args[1]);
+      if(!/^[0-9]*$/.test(args[1]) && args[1].toLowerCase() !== 'none') return msg.channel.send('Invalid number!')
+      let autokick;
+      if(args[1].toLowerCase() === 'none') {
+        autokick = 0;
+      } else autokick = parseInt(args[1]);
+      if(autokick < 0) autokick = 0;
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       guildsettings.autokick = autokick;
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
@@ -368,7 +395,12 @@ client.on('message', (msg) => {
         msg.channel.send('Usage: ' + prefix + 'autoban <Number>');
         return;
       }
-      if(!/^[0-9]*$/.test(args[1])) return msg.channel.send('Invalid number!');
+      if(!/^[0-9]*$/.test(args[1]) && args[1].toLowerCase() !== 'none') return msg.channel.send('Invalid number!')
+      let autoban;
+      if(args[1].toLowerCase() === 'none') {
+        autoban = 0;
+      } else autoban = parseInt(args[1]);
+      if(autoban < 0) autoban = 0;
       let autoban = parseInt(args[1]);
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       guildsettings.autoban = autoban;
@@ -492,7 +524,7 @@ client.on('message', (msg) => {
       }});
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'passwordprotect')) {
-      if(!msg.member.hasPermission('ADMINISTRATOR')) {
+      /*if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
           msg.channel.send('You have to be an administator to do this!');
           return;
@@ -503,7 +535,8 @@ client.on('message', (msg) => {
         msg.channel.send(collected.first().content);
       }) .catch(() => {
         msg.channel.send('Operation timed out.');
-      });
+      });*/
+      msg.channel.send('This concept is too in-production to even have a developer version. Please check back later.');
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'dev')) {
       if(!botDevelopers.includes(msg.member.id)) {
