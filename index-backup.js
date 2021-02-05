@@ -305,7 +305,7 @@ client.on('message', (msg) => {
       }
       let userID = args[1].replace('<@!', '').replace('<@', '').replace('>', '');
       if(!/^[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
-      if(!msg.guild.members.cache.get(userID)) {
+      if(!msg.guild.members.fetch(userID)) {
         msg.channel.send('User is not in this guild!');
         return;
       }
@@ -330,8 +330,8 @@ client.on('message', (msg) => {
       warnUser.warns[warnUser.warns.length] = useReason ? reason : "No reason provided.";
       guildsettings.warnings = warnings;
 
-      if(guildsettings.warnings.find(e => e.user === userID).warns.length == guildsettings.autokick) msg.guild.members.cache.get(userID).kick('Auto kick by ' + client.user.tag) .catch(err => {});
-      if(guildsettings.warnings.find(e => e.user === userID).warns.length == guildsettings.autoban) msg.guild.members.cache.get(userID).ban({reason: 'Auto ban by ' + client.user.tag}) .catch(err => {});
+      if(guildsettings.warnings.find(e => e.user === userID).warns.length == guildsettings.autokick) msg.guild.members.fetch(userID).kick('Auto kick by ' + client.user.tag) .catch(err => {});
+      if(guildsettings.warnings.find(e => e.user === userID).warns.length == guildsettings.autoban) msg.guild.members.fetch(userID).ban({reason: 'Auto ban by ' + client.user.tag}) .catch(err => {});
 
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
 
