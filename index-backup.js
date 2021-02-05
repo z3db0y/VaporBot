@@ -380,7 +380,7 @@ client.on('message', (msg) => {
               }
           }
           guildData.rainbowRoles.push(msg.content.substring(prefix.length+15, prefix.length+33));
-          msg.channel.send('d('Enabled rainbow role for ' + msg.content.substring(prefix.length+12, prefix.length+33) + '>!');
+          msg.channel.send('Enabled rainbow role for ' + msg.content.substring(prefix.length+12, prefix.length+33) + '>!');
           fs.writeFileSync(filename, JSON.stringify(guildData, null, 2));
       })
       .catch((err) => {
