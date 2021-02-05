@@ -2,6 +2,9 @@
 const fs = require('fs');
 const { emit } = require('process');
 
+function checkUpdate(guildID) {
+
+}
 
 module.exports = {
     currentVersion: null,
@@ -11,11 +14,11 @@ module.exports = {
         fs.writeFileSync(`${guildID}.json`, JSON.stringify(guildSettings, null, 2));
     },
     checkForUpdates: function (guildID) {
-
+        checkUpdate(guildID);
     },
     init: function (client) {
         client.guilds.cache.forEach((guild) => {
-            setInterval(this.checkForUpdates(guild.id), 60000);
+            setInterval(checkUpdate(guild.id), 60000);
         });
     }
     
