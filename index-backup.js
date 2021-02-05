@@ -2,7 +2,7 @@
 
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
-updateAPI.currentVersion = process.env.CURRENT_VERSION;
+
 const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
@@ -516,7 +516,7 @@ client.on('message', (msg) => {
       let args = msg.content.toLowerCase().substring(prefix.length+4).split(' ');
       switch(args[0]) {
         case 'guildsettings':
-          msg.channel.send('```' + fs.readFileSync(filename) + '```');
+          msg.channel.send('```json\n' + fs.readFileSync(filename) + '```');
           break;
         case 'add':
           if(args.length > 1) {
