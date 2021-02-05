@@ -18,7 +18,7 @@ module.exports = {
     },
     init: function (client) {
         client.guilds.cache.forEach((guild) => {
-            setInterval(checkUpdate(guild.id), 60000);
+            setInterval(() => checkUpdate(guild.id), 60000);
         });
     }
     
