@@ -10,12 +10,13 @@ module.exports = {
         guildSettings.updateChannel = channelID;
         fs.writeFileSync(`${guildID}.json`, JSON.stringify(guildSettings, null, 2));
     },
+    checkForUpdates: function (guildID) {
+
+    },
     init: function (client) {
         client.guilds.cache.forEach((guild) => {
             setInterval(this.checkForUpdates(guild.id), 60000);
         });
-    },
-    checkForUpdates: function (guildID) {
-
     }
+    
 }
