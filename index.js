@@ -2,7 +2,7 @@
 
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -139,6 +139,10 @@ client.on('message', (msg) => {
         }
       }
       let args = msg.content.split(' ');
+      if(args.length < 2) {
+        msg.channel.send('Usage: ' + prefix + 'ban <UserID>|<@User>');
+        return;
+      }
       let user = args[1];
       let reason;
       if(args.length > 2) {
@@ -176,6 +180,10 @@ client.on('message', (msg) => {
         }
       }
       let args = msg.content.split(' ');
+      if(args.length < 2) {
+        msg.channel.send('Usage: ' + prefix + 'unban <UserID>|<@User>');
+        return;
+      }
       let user = args[1];
       let reason;
       if(args.length > 2) {
@@ -219,6 +227,10 @@ client.on('message', (msg) => {
         }
       }
       let args = msg.content.split(' ');
+      if(args.length < 2) {
+        msg.channel.send('Usage: ' + prefix + 'kick <UserID>|<@User>');
+        return;
+      }
       let userID = args[1].replace('<@!', '').replace('<@').replace('>', '');
       if(!/^[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
       let newArgs = args;
@@ -237,6 +249,93 @@ client.on('message', (msg) => {
         msg.channel.send('Couldn\'t kick user!');
       }
       
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'warn')) {
+      if(!msg.member.hasPermission('ADMINISTRATOR')) {
+        if(!botDevelopers.includes(msg.member.id)) {
+          msg.channel.send('You have to be an administator to do this!');
+          return;
+        }
+      }
+      let args = msg.content.split(' ');
+      if(args.length < 2) {
+        msg.channel.send('Usage: ' + prefix + 'warn <UserID>|<@User>');
+        return;
+      }
+      let userID = args[1].replace('<@!', '').replace('<@', '').replace('>', '');
+      if(!/^[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
+      if(!msg.guild.members.cache.find(m => m.id === userID)) {
+        msg.channel.send('User is not in this guild!');
+        return;
+      }
+      let reason;
+      if(args.length > 2) {
+        var newArgs = args;
+        newArgs.splice(0, 2);
+        reason = newArgs.join(' ');
+      }
+      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+      let warnings = guildsettings.warnings;
+      let warnUser = warnings.get(u => u.user === userID);
+      if(!warnUser) {
+        warnings[warnings.length] = {
+          "user": userID,
+          "warns": []
+        }
+        warnUser = warnings.get(u => u.user === userID);
+      }
+      let useReason = false;
+      if(reason) useReason=true;
+      warnUser.warns[warnUser.warns.length] = useReason ? reason : "No reason provided.";
+      guildsettings.warnings = warnings;
+
+      if(guildsettings.warnings.get(u => u.user === userID).warns.length == guildsettings.autokick) msg.guild.members.cache.get(userID).kick('Auto kick by ' + client.user.tag) .catch(err => {});
+      if(guildsettings.warnings.get(u => u.user === userID).warns.length == guildsettings.autoban) msg.guild.members.cache.get(userID).ban({reason: 'Auto ban by ' + client.user.tag}) .catch(err => {});
+
+      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
+
+      msg.channel.send(`Warned **<@${userID}>** (${userID}) with reason **${useReason ? reason : "No reason provided."}**!`);
+    }
+    else if(msg.content.toLowerCase().startsWith((prefix + 'warnings') || (prefix + 'warns'))) {
+      if(!msg.member.hasPermission('ADMINISTRATOR')) {
+        if(!botDevelopers.includes(msg.member.id)) {
+          msg.channel.send('You have to be an administator to do this!');
+          return;
+        }
+      }
+      let args = msg.content.split(' ');
+      if(args.length < 2) {
+        msg.channel.send('Usage: ' + prefix + 'warnings <UserID>|<@User>');
+        return;
+      }
+      let userID = args[1].replace('<@!', '').replace('<@', '').replace('>', '');
+      if(!/^[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
+      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+      if(!guildsettings.warnings.get(u => u.id === userID)) {
+        msg.channel.send('This user has no warnings!');
+      } else {
+        let warns = guildsettings.warnings.get(u => u.id === userID).warns;
+        let warnList = [];
+        for(var i = 0; i < warns.length; i++) {
+          if(i != warns.length-1) {
+            warnList[warnList.length] = {
+              name: `${i+1}. ${warns[i]}\n`,
+              value: '*,*'
+            }
+          } else warnList[warnList.length] = {
+            name: `${i+1}. ${warns[i]}`,
+            value: '*,*'
+          }
+        }
+        msg.channel.send({ embed: {
+          title: `${msg.guild.members.cache.get(userID).client.user.tag}'s Warnings`,
+          thumbnail: {
+            url: client.user.avatarURL()
+          },
+          fields: warnList,
+          timestamp: new Date()
+        }})
+      }
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'store')) {
         if(JSON.parse(fs.readFileSync(filename)).store == null) {
