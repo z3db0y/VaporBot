@@ -28,7 +28,7 @@ function checkUpdate(guildID, client) {
     client.channels.fetch(guildSettings.updateChannel).send({ embed: {
         title: `**Version ${latestRelease.replace('.txt', '')} Released!**`,
         thumbnail: {
-            url: client.user.avatarUrl()
+            url: client.user.avatar
         },
         description: `\`\`\`diff\n${fs.readFileSync(latestRelease)}\`\`\``,
         timestamp: new Date()
