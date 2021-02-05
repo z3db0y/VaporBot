@@ -358,7 +358,30 @@ client.on('message', (msg) => {
       msg.channel.send(`Warned **<@${userID}>** (${userID}) with reason **${useReason ? reason : "No reason provided."}**!`);
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'delwarn')) {
-      msg.channel.send('Command is undergoing development. Please check back later.');
+      // msg.channel.send('Command is undergoing development. Please check back later.');
+      if(!msg.member.hasPermission('ADMINISTRATOR')) {
+        if(!botDevelopers.includes(msg.member.id)) {
+          msg.channel.send('You have to be an administator to do this!');
+          return;
+        }
+      }
+      let args = msg.content.split(' ');
+      if(args.length < 3) {
+        msg.channel.send('Usage: ' + prefix + 'delwarn <UserID>|<@User> <WarningID>');
+        return;
+      }
+      let userID = args[1].replace('<@!', '').replace('<@', '').replace('>', '');
+      if(!/[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
+      if(!/[0-9]*$/.test(args[2])) return msg.channel.send('Invalid warning ID!');
+      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+      if(!guildsettings.warnings.find(e => e.user === userID)) return msg.channel.send('This user has no warnings!');
+      let warnUser = guildsettings.warnings.find(e => e.user === userID);
+      if(args[2] > 0 && args[2] < warnUser.warns.length) {
+        let warnID = args[2]-1;
+        warnUser.warns.splice(warnID, 1);
+        fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
+        msg.channel.send(`Removed warning with ID **${warnID+1}** from **<@${userID}>** (${userID})!`);
+      } else return msg.channel.send('Invalid warning ID!');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'autokick')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
