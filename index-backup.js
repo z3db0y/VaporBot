@@ -250,7 +250,7 @@ client.on('message', (msg) => {
       }
       
     }
-    else if(msg.content.toLowerCase().startsWith((prefix + 'warnings') || (prefix + 'warns'))) {
+    else if(msg.content.toLowerCase().startsWith(prefix + 'warnings') || msg.content.toLowerCase().startsWith(prefix + 'warns')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
           msg.channel.send('You have to be an administator to do this!');
@@ -282,7 +282,7 @@ client.on('message', (msg) => {
           }
         }
         msg.channel.send({ embed: {
-          title: `${msg.guild.members.cache.get(userID).client.user.tag}'s Warnings`,
+          title: `${msg.guild.members.fetch(userID).displayName}'s Warnings`,
           thumbnail: {
             url: client.user.avatarURL()
           },
