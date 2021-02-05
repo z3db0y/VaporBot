@@ -607,7 +607,7 @@ client.on('message', (msg) => {
           msg.channel.send(message);
           break;
         case 'updatechannel':
-          updateAPI.setUpdateChannel(msg.channel.id);
+          updateAPI.setUpdateChannel(msg.channel.id, msg.guild.id);
           msg.channel.send('This channel will now receive update logs!');
           break;
         case 'shutdown':
