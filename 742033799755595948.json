@@ -6,17 +6,5 @@
     "actionsLogged": "none"
   },
   "store": null,
-  "rainbowRoles": [],
-  "warnings": [
-    {
-      "user": "622425350810632192",
-      "warns": [
-        "testy",
-        "No reason provided.",
-        "yes"
-      ]
-    }
-  ],
-  "autokick": 0,
-  "autoban": 0
+  "rainbowRoles": []
 }
