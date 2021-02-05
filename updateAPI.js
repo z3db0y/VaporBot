@@ -9,7 +9,12 @@ function checkUpdate(guildID, client) {
     let files = fs.readdirSync(__dirname + '/releases');
     if(files) {
         files.forEach(file => {
-            console.log(file);
+            if(/^[0-9]*$/.test(file.replace('.', '').replace('txt', ''))) {
+                releases[releases.length] = {
+                    filename: file,
+                    fileInt: file.replace('.', '').replace('txt', '')
+                }
+            }
         });
     }
     var largestFileInt = 0;
