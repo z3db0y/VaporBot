@@ -281,7 +281,7 @@ client.on('message', (msg) => {
             value: '*.*'
           }
         }
-        let memberName = msg.guild.members.resolve(userID).displayName;
+        let memberName = client.users.resolve(userID).tag;
         msg.channel.send({ embed: {
           title: `${memberName}'s Warnings`,
           thumbnail: {
