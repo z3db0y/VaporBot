@@ -20,6 +20,7 @@ function checkUpdate(guildID, client) {
     releases.forEach(r => {
         if(r.fileInt > largestFileInt) largestFileInt = r.fileInt;
     });
+    console.log(JSON.stringify(releases, null, 1));
     let latestRelease = releases.find(e => e.fileInt === largestFileInt).filename;
     if(guildSettings.lastLoggedUpdate == latestRelease) return;
 
