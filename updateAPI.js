@@ -6,12 +6,12 @@ function checkUpdate(guildID, client) {
     let guildSettings = JSON.parse(fs.readFileSync(`${guildID}.json`));
     if(!guildSettings.updateChannel) return;
     let releases = [];
-    fs.readdir(__dirname, (err, files) => {
-        if(err) console.log(err.message);
+    let files = fs.readdirSync(__dirname);
+    if(files) {
         files.forEach(file => {
-            
+            console.log(file);
         });
-    });
+    }
     var largestFileInt = 0;
     releases.forEach(r => {
         if(r.fileInt > largestFileInt) largestFileInt = r.fileInt;
