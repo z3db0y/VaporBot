@@ -6,11 +6,10 @@ function checkUpdate(guildID, client) {
     let guildSettings = JSON.parse(fs.readFileSync(`${guildID}.json`));
     if(!guildSettings.updateChannel) return;
     let releases = [];
-    fs.readdir('./releases/', (err, files) => {
+    fs.readdir('/releases', (err, files) => {
         if(err) return console.log(err.message);
         files.forEach(file => {
             console.log(file);
-            console.log(file.replace('.', '').replace('txt', ''));
             if(/^[0-9]*$/.test(file.replace('.', '').replace('txt', ''))) releases[releases.length] = {
                 filename: file,
                 fileInt: parseInt(file.replace('.', '').replace('txt'))
