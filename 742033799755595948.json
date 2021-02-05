@@ -9,5 +9,12 @@
   "rainbowRoles": [],
   "lastLoggedUpdate": "1.0.1.txt",
   "updateChannel": "791953054593318923",
-  "warnings": []
+  "warnings": [
+    {
+      "user": "622425350810632192",
+      "warns": [
+        "e"
+      ]
+    }
+  ]
 }
