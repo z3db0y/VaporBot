@@ -1,8 +1,9 @@
 'use strict';
 
+const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -10,8 +11,6 @@ const client = new Discord.Client();
 const fs = require('fs');
 const GuildAPI = require('./guildAPI');
 const guildAPI = new GuildAPI.GuildAPI();
-const activeVCs = new Map();
-const vcConnectionMap = new Map();
 const { exit } = require('process');
 const RainbowRoleAPI = require('./rainbowRoleAPI');
 const rainbowRoleAPI = new RainbowRoleAPI.RainbowRole();
@@ -30,6 +29,7 @@ client.on('ready', () => {
         console.log('\x1b[35m[Discord] \x1b[0mSet custom status (\x1b[32mSTABLE\x1b[0m)!');
       });
     }
+    updateAPI.init(client);
     client.guilds.cache.forEach((guild) => {
         guildAPI.initialiseGuild(guild);
         rainbowRoleAPI.runRainbowRole(client, guild.id);
@@ -85,6 +85,26 @@ client.on('message', (msg) => {
                 {
                     name: prefix + "kick",
                     value: "Kicks a user."
+                },
+                {
+                    name: prefix + "warn",
+                    value: "Warns a user."
+                },
+                {
+                    name: prefix + "delwarn",
+                    value: "Removes a warning for a user."
+                },
+                {
+                    name: prefix + "warnings | " + prefix + "warns",
+                    value: "Shows a user's warnings."
+                },
+                {
+                    name: prefix + "autokick",
+                    value: "Set amount of warnings before a user is automatically kicked from the server."
+                },
+                {
+                    name: prefix + "autoban",
+                    value: "Set amount of warnings before a user is automatically banned from the server."
                 },
                 {
                     name: prefix + "store",
@@ -250,53 +270,7 @@ client.on('message', (msg) => {
       }
       
     }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'warn')) {
-      if(!msg.member.hasPermission('ADMINISTRATOR')) {
-        if(!botDevelopers.includes(msg.member.id)) {
-          msg.channel.send('You have to be an administator to do this!');
-          return;
-        }
-      }
-      let args = msg.content.split(' ');
-      if(args.length < 2) {
-        msg.channel.send('Usage: ' + prefix + 'warn <UserID>|<@User>');
-        return;
-      }
-      let userID = args[1].replace('<@!', '').replace('<@', '').replace('>', '');
-      if(!/^[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
-      if(!msg.guild.members.cache.find(m => m.id === userID)) {
-        msg.channel.send('User is not in this guild!');
-        return;
-      }
-      let reason;
-      if(args.length > 2) {
-        var newArgs = args;
-        newArgs.splice(0, 2);
-        reason = newArgs.join(' ');
-      }
-      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-      let warnings = guildsettings.warnings;
-      let warnUser = warnings.get(u => u.user === userID);
-      if(!warnUser) {
-        warnings[warnings.length] = {
-          "user": userID,
-          "warns": []
-        }
-        warnUser = warnings.get(u => u.user === userID);
-      }
-      let useReason = false;
-      if(reason) useReason=true;
-      warnUser.warns[warnUser.warns.length] = useReason ? reason : "No reason provided.";
-      guildsettings.warnings = warnings;
-
-      if(guildsettings.warnings.get(u => u.user === userID).warns.length == guildsettings.autokick) msg.guild.members.cache.get(userID).kick('Auto kick by ' + client.user.tag) .catch(err => {});
-      if(guildsettings.warnings.get(u => u.user === userID).warns.length == guildsettings.autoban) msg.guild.members.cache.get(userID).ban({reason: 'Auto ban by ' + client.user.tag}) .catch(err => {});
-
-      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
-
-      msg.channel.send(`Warned **<@${userID}>** (${userID}) with reason **${useReason ? reason : "No reason provided."}**!`);
-    }
-    else if(msg.content.toLowerCase().startsWith((prefix + 'warnings') || (prefix + 'warns'))) {
+    else if(msg.content.toLowerCase().startsWith(prefix + 'warnings') || msg.content.toLowerCase().startsWith(prefix + 'warns')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
           msg.channel.send('You have to be an administator to do this!');
@@ -311,24 +285,24 @@ client.on('message', (msg) => {
       let userID = args[1].replace('<@!', '').replace('<@', '').replace('>', '');
       if(!/^[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-      if(!guildsettings.warnings.get(u => u.id === userID)) {
+      if(!guildsettings.warnings.find(e => e.user === userID)) {
         msg.channel.send('This user has no warnings!');
       } else {
-        let warns = guildsettings.warnings.get(u => u.id === userID).warns;
+        let warns = guildsettings.warnings.find(e => e.user === userID).warns;
         let warnList = [];
         for(var i = 0; i < warns.length; i++) {
           if(i != warns.length-1) {
             warnList[warnList.length] = {
               name: `${i+1}. ${warns[i]}\n`,
-              value: '*,*'
+              value: '*.*'
             }
           } else warnList[warnList.length] = {
             name: `${i+1}. ${warns[i]}`,
-            value: '*,*'
+            value: '*.*'
           }
         }
         msg.channel.send({ embed: {
-          title: `${msg.guild.members.cache.get(userID).client.user.tag}'s Warnings`,
+          title: `${userID}'s Warnings`,
           thumbnail: {
             url: client.user.avatarURL()
           },
@@ -336,6 +310,102 @@ client.on('message', (msg) => {
           timestamp: new Date()
         }})
       }
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'warn')) {
+      if(!msg.member.hasPermission('ADMINISTRATOR')) {
+        if(!botDevelopers.includes(msg.member.id)) {
+          msg.channel.send('You have to be an administator to do this!');
+          return;
+        }
+      }
+      let args = msg.content.split(' ');
+      if(args.length < 2) {
+        msg.channel.send('Usage: ' + prefix + 'warn <UserID>|<@User>');
+        return;
+      }
+      let userID = args[1].replace('<@!', '').replace('<@', '').replace('>', '');
+      if(!/^[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
+      if(!msg.guild.members.fetch().then(e => e.get(userID))) {
+        msg.channel.send('User is not in this guild!');
+        return;
+      }
+      let reason;
+      if(args.length > 2) {
+        var newArgs = args;
+        newArgs.splice(0, 2);
+        reason = newArgs.join(' ');
+      }
+      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+      let warnings = guildsettings.warnings;
+      let warnUser = warnings.find(e => e.user === userID);
+      if(!warnUser) {
+        warnings[warnings.length] = {
+          "user": userID,
+          "warns": []
+        }
+        warnUser = warnings.find(e => e.user === userID);
+      }
+      let useReason = false;
+      if(reason) useReason=true;
+      warnUser.warns[warnUser.warns.length] = useReason ? reason : "No reason provided.";
+      guildsettings.warnings = warnings;
+
+      if(guildsettings.warnings.find(e => e.user === userID).warns.length == guildsettings.autokick) msg.guild.members.fetch().then(e => e.get(userID).kick('Auto kick by ' + client.user.tag) .catch(err => {}));
+      if(guildsettings.warnings.find(e => e.user === userID).warns.length == guildsettings.autoban) msg.guild.members.fetch().then(e => e.get(userID).ban({reason: 'Auto ban by ' + client.user.tag}) .catch(err => {}));
+
+      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
+
+      msg.channel.send(`Warned **<@${userID}>** (${userID}) with reason **${useReason ? reason : "No reason provided."}**!`);
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'delwarn')) {
+      msg.channel.send('Command is undergoing development. Please check back later.');
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'autokick')) {
+      if(!msg.member.hasPermission('ADMINISTRATOR')) {
+        if(!botDevelopers.includes(msg.member.id)) {
+          msg.channel.send('You have to be an administator to do this!');
+          return;
+        }
+      }
+      let args = msg.content.split(' ');
+      if(args.length < 2) {
+        msg.channel.send('Usage: ' + prefix + 'autokick <Number>');
+        return;
+      }
+      if(!/^[0-9]*$/.test(args[1]) && args[1].toLowerCase() !== 'none') return msg.channel.send('Invalid number!')
+      let autokick;
+      if(args[1].toLowerCase() === 'none') {
+        autokick = 0;
+      } else autokick = parseInt(args[1]);
+      if(autokick < 0) autokick = 0;
+      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+      guildsettings.autokick = autokick;
+      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
+      msg.channel.send(`Set warnings until kick to **${autokick}**!`);
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'autoban')) {
+      if(!msg.member.hasPermission('ADMINISTRATOR')) {
+        if(!botDevelopers.includes(msg.member.id)) {
+          msg.channel.send('You have to be an administator to do this!');
+          return;
+        }
+      }
+      let args = msg.content.split(' ');
+      if(args.length < 2) {
+        msg.channel.send('Usage: ' + prefix + 'autoban <Number>');
+        return;
+      }
+      if(!/^[0-9]*$/.test(args[1]) && args[1].toLowerCase() !== 'none') return msg.channel.send('Invalid number!')
+      let autoban;
+      if(args[1].toLowerCase() === 'none') {
+        autoban = 0;
+      } else autoban = parseInt(args[1]);
+      if(autoban < 0) autoban = 0;
+      let autoban = parseInt(args[1]);
+      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+      guildsettings.autoban = autoban;
+      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
+      msg.channel.send(`Set warnings until kick to **${autoban}**!`);
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'store')) {
         if(JSON.parse(fs.readFileSync(filename)).store == null) {
@@ -454,7 +524,7 @@ client.on('message', (msg) => {
       }});
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'passwordprotect')) {
-      if(!msg.member.hasPermission('ADMINISTRATOR')) {
+      /*if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
           msg.channel.send('You have to be an administator to do this!');
           return;
@@ -465,7 +535,8 @@ client.on('message', (msg) => {
         msg.channel.send(collected.first().content);
       }) .catch(() => {
         msg.channel.send('Operation timed out.');
-      });
+      });*/
+      msg.channel.send('This concept is too in-production to even have a developer version. Please check back later.');
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'dev')) {
       if(!botDevelopers.includes(msg.member.id)) {
@@ -478,7 +549,7 @@ client.on('message', (msg) => {
       let args = msg.content.toLowerCase().substring(prefix.length+4).split(' ');
       switch(args[0]) {
         case 'guildsettings':
-          msg.channel.send('```' + fs.readFileSync(filename) + '```');
+          msg.channel.send('```json\n' + fs.readFileSync(filename) + '```');
           break;
         case 'add':
           if(args.length > 1) {
@@ -567,6 +638,10 @@ client.on('message', (msg) => {
             message += '<@' + botDevelopers[i] + '> | ID: ' + botDevelopers[i] + '\n';
           }
           msg.channel.send(message);
+          break;
+        case 'updatechannel':
+          updateAPI.setUpdateChannel(msg.channel.id, msg.guild.id);
+          msg.channel.send('This channel will now receive update logs!');
           break;
         case 'shutdown':
           client.destroy();
