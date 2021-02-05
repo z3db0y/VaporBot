@@ -266,10 +266,10 @@ client.on('message', (msg) => {
       let userID = args[1].replace('<@!', '').replace('<@', '').replace('>', '');
       if(!/^[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-      if(!guildsettings.warnings.get(u => u.id === userID)) {
+      if(!guildsettings.warnings.find(e => e.user === userID)) {
         msg.channel.send('This user has no warnings!');
       } else {
-        let warns = guildsettings.warnings.get(u => u.id === userID).warns;
+        let warns = guildsettings.warnings.find(e => e.user === userID).warns;
         let warnList = [];
         for(var i = 0; i < warns.length; i++) {
           if(i != warns.length-1) {
