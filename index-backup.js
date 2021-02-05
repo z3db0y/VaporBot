@@ -282,7 +282,7 @@ client.on('message', (msg) => {
           }
         }
         msg.channel.send({ embed: {
-          title: `${msg.guild.members.resolve(userID).displayName}'s Warnings`,
+          title: `${client.users.resolve(userID)}'s Warnings`,
           thumbnail: {
             url: client.user.avatarURL()
           },
