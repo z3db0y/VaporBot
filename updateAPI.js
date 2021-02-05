@@ -30,7 +30,7 @@ function checkUpdate(guildID, client) {
         thumbnail: {
             url: client.user.avatarURL()
         },
-        color: `0x${client.guilds.fetch(guildID).me.displayHexColor.substring(1)}`,
+        color: `0x${client.guilds.cache.get(guildID).me.displayHexColor.substring(1)}`,
         description: `\`\`\`diff\n${fs.readFileSync(__dirname + '/releases/' + latestRelease)}\`\`\``,
         timestamp: new Date()
     }});
