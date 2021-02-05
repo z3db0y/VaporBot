@@ -6,7 +6,7 @@ function checkUpdate(guildID, client) {
     let guildSettings = JSON.parse(fs.readFileSync(`${guildID}.json`));
     if(!guildSettings.updateChannel) return;
     let releases = [];
-    let files = fs.readdirSync(__dirname);
+    let files = fs.readdirSync(__dirname + '/releases');
     if(files) {
         files.forEach(file => {
             console.log(file);
