@@ -250,6 +250,48 @@ client.on('message', (msg) => {
       }
       
     }
+    else if(msg.content.toLowerCase().startsWith((prefix + 'warnings') || (prefix + 'warns'))) {
+      if(!msg.member.hasPermission('ADMINISTRATOR')) {
+        if(!botDevelopers.includes(msg.member.id)) {
+          msg.channel.send('You have to be an administator to do this!');
+          return;
+        }
+      }
+      console.log('\x1b[31m[Debug] \x1b[0m' + JSON.stringify(msg.guild.members, null, 2));
+      let args = msg.content.split(' ');
+      if(args.length < 2) {
+        msg.channel.send('Usage: ' + prefix + 'warnings <UserID>|<@User>');
+        return;
+      }
+      let userID = args[1].replace('<@!', '').replace('<@', '').replace('>', '');
+      if(!/^[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
+      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+      if(!guildsettings.warnings.get(u => u.id === userID)) {
+        msg.channel.send('This user has no warnings!');
+      } else {
+        let warns = guildsettings.warnings.get(u => u.id === userID).warns;
+        let warnList = [];
+        for(var i = 0; i < warns.length; i++) {
+          if(i != warns.length-1) {
+            warnList[warnList.length] = {
+              name: `${i+1}. ${warns[i]}\n`,
+              value: '*,*'
+            }
+          } else warnList[warnList.length] = {
+            name: `${i+1}. ${warns[i]}`,
+            value: '*,*'
+          }
+        }
+        msg.channel.send({ embed: {
+          title: `${msg.guild.members.cache.get(userID).client.user.tag}'s Warnings`,
+          thumbnail: {
+            url: client.user.avatarURL()
+          },
+          fields: warnList,
+          timestamp: new Date()
+        }})
+      }
+    }
     else if(msg.content.toLowerCase().startsWith(prefix + 'warn')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
@@ -295,48 +337,6 @@ client.on('message', (msg) => {
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
 
       msg.channel.send(`Warned **<@${userID}>** (${userID}) with reason **${useReason ? reason : "No reason provided."}**!`);
-    }
-    else if(msg.content.toLowerCase().startsWith((prefix + 'warnings') || (prefix + 'warns'))) {
-      if(!msg.member.hasPermission('ADMINISTRATOR')) {
-        if(!botDevelopers.includes(msg.member.id)) {
-          msg.channel.send('You have to be an administator to do this!');
-          return;
-        }
-      }
-      console.log('\x1b[31m[Debug] \x1b[0m' + JSON.stringify(msg.guild.members, null, 2));
-      let args = msg.content.split(' ');
-      if(args.length < 2) {
-        msg.channel.send('Usage: ' + prefix + 'warnings <UserID>|<@User>');
-        return;
-      }
-      let userID = args[1].replace('<@!', '').replace('<@', '').replace('>', '');
-      if(!/^[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
-      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-      if(!guildsettings.warnings.get(u => u.id === userID)) {
-        msg.channel.send('This user has no warnings!');
-      } else {
-        let warns = guildsettings.warnings.get(u => u.id === userID).warns;
-        let warnList = [];
-        for(var i = 0; i < warns.length; i++) {
-          if(i != warns.length-1) {
-            warnList[warnList.length] = {
-              name: `${i+1}. ${warns[i]}\n`,
-              value: '*,*'
-            }
-          } else warnList[warnList.length] = {
-            name: `${i+1}. ${warns[i]}`,
-            value: '*,*'
-          }
-        }
-        msg.channel.send({ embed: {
-          title: `${msg.guild.members.cache.get(userID).client.user.tag}'s Warnings`,
-          thumbnail: {
-            url: client.user.avatarURL()
-          },
-          fields: warnList,
-          timestamp: new Date()
-        }})
-      }
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'store')) {
         if(JSON.parse(fs.readFileSync(filename)).store == null) {
