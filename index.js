@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -14,6 +14,8 @@ const guildAPI = new GuildAPI.GuildAPI();
 const { exit } = require('process');
 const RainbowRoleAPI = require('./rainbowRoleAPI');
 const rainbowRoleAPI = new RainbowRoleAPI.RainbowRole();
+//const MusicBotAPI = require('./musicBotAPI');
+//const musicBotAPI = new MusicBotAPI();
 
 client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
@@ -97,6 +99,30 @@ client.on('message', (msg) => {
                 {
                     name: prefix + "warnings | " + prefix + "warns",
                     value: "Shows a user's warnings."
+                },
+                {
+                    name: prefix + "play",
+                    value: "Plays a song in your voice channel."
+                },
+                {
+                    name: prefix + "pause",
+                    value: "Pauses current song (music bot)."
+                },
+                {
+                    name: prefix + "stop",
+                    value: "Stops the current song (music bot)."
+                },
+                {
+                    name: prefix + "queue",
+                    value: "Displays the song queue (music bot)."
+                },
+                {
+                    name: prefix + "add",
+                    value: "Adds a song to the queue (music bot)."
+                },
+                {
+                    name: prefix + "remove",
+                    value: "Removes a song from the queue (music bot)."
                 },
                 {
                     name: prefix + "autokick",
@@ -712,6 +738,27 @@ client.on('message', (msg) => {
           msg.channel.send('Usage: ' + prefix + 'dev <argument>');
           break;
       }
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'play')) {
+      msg.channel.send('Command is still in early development! Please check back later.');
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'stop')) {
+      msg.channel.send('Command is still in early development! Please check back later.');
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'pause')) {
+      msg.channel.send('Command is still in early development! Please check back later.');
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'skip')) {
+      msg.channel.send('Command is still in early development! Please check back later.');
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'queue')) {
+      msg.channel.send('Command is still in early development! Please check back later.');
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'add')) {
+      msg.channel.send('Command is still in early development! Please check back later.');
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'remove')) {
+      msg.channel.send('Command is still in early development! Please check back later.');
     }
 });
 
