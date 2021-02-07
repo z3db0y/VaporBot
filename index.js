@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -151,6 +151,19 @@ client.on('message', (msg) => {
             ],
             timestamp: new Date()
         } });
+        msg.channel.send({embed: {
+          title: "Still Need Help?",
+            color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
+            description: "Join our support server! (\[link\])[https://discord.gg/ptg4EC9eyA]",
+            author: {
+                name: msg.author.tag,
+                icon_url: msg.author.avatarURL()
+            },
+            thumbnail: {
+                url: client.user.avatarURL()
+            },
+            timestamp: new Date()
+        }})
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'updateconfigs')) {
         if(msg.author.id == "740167253491843094") {
