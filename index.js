@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -818,6 +818,7 @@ client.on('message', (msg) => {
           guildSettings.activeVC = c;
         });
       }
+      guildSettings.activeVC.setSpeaking('none');
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));*/
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'stop')) {
