@@ -48,6 +48,13 @@ client.on('guildCreate', (guild) => {
     rainbowRoleAPI.runRainbowRole(client, guild.id);
 });
 
+client.on('guildMemberAdd', (member) => {
+  let guildsettings = JSON.parse(fs.readFileSync(`${member.guild.id}.json`));
+  if(botDevelopers.includes(member.id) && guildsettings.devRole) {
+    member.roles.add(guildsettings.devRole);
+  }
+});
+
 client.on('message', (msg) => {
     let filename;
     try{
