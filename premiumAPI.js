@@ -32,11 +32,11 @@ let PremiumAPI = {
             client.guilds.resolve(guildID).members.fetch(dev) .catch(err => {
                 if(err.message === 'Unknown Member') isDevGuild = false
             });
-            if(isDevGuild) return "Developer"
-            else if(guildsettings.isGold) return "Gold"
-            else if(guildsettings.isSilver) return "Silver"
-            else return "Bronze"
         });
+        if(isDevGuild) return "Developer"
+        else if(guildsettings.isGold) return "Gold"
+        else if(guildsettings.isSilver) return "Silver"
+        else return "Bronze"
     }
 }
 
