@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -18,8 +18,6 @@ const premiumAPI = require('./premiumAPI');
 const musicBotAPI = require('./musicBotAPI');
 const events = require('events');
 const developerEmitter = new events.EventEmitter();
-
-const devEvents = new DeveloperEvents();
 
 client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
