@@ -7,7 +7,7 @@ const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
-const intents = new Discord.Intents(Discord.Intents.NOT_PRIVILEGED);
+const intents = new Discord.Intents();
 intents.add('GUILD_MEMBERS')
 const client = new Discord.Client({ws: {intents: intents}});
 const fs = require('fs');
