@@ -894,6 +894,7 @@ developerEmitter.on('devAdded', (userID) => {
     let user = g.members.fetch(userID);
     let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
     if(user && guildsettings.devRole) {
+      user = Promise.resolve(user);
       if(!user.roles.has(guildsettings.devRole)) user.roles.remove(guildsettings.devRole);
     }
   });
