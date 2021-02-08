@@ -881,9 +881,9 @@ client.on('message', (msg) => {
 
 developerEmitter.on('devRemoved', (userID) => {
   client.guilds.cache.forEach(g => {
-    g.members.fetch(userID) .then(() => {
+    g.members.resolve(userID) .then(() => {
       let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
-      if(guildsettings.devRole && g.members.fetch(userID).roles.has(guildsettings.devRole)) g.members.fetch(userID).roles.remove(guildsettings.devRole);
+      if(guildsettings.devRole && g.members.resolve(userID).roles.cache.has(guildsettings.devRole)) g.members.resolve(userID).roles.remove(guildsettings.devRole);
     });
   });
 });
