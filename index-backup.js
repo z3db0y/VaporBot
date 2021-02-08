@@ -761,8 +761,14 @@ client.on('message', (msg) => {
           updateAPI.setUpdateChannel(msg.channel.id, msg.guild.id);
           msg.channel.send('This channel will now receive update logs!');
           break;
-        case 'shutdown':
-          client.destroy();
+        case 'role':
+          if(args.length < 3) return msg.channel.send('Usage: ' + prefix + 'dev role <RoleID>|<RoleMention>');
+          let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+          let role = args[2].replace('<&', '').replace('>', '');
+          let roleIsValid = true;
+          msg.guild.roles.fetch(role) .catch(err => {
+            console.log(err.message);
+          });
           break;
         case 'help':
           msg.channel.send({ embed: {
@@ -810,8 +816,8 @@ client.on('message', (msg) => {
       }
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'play')) {
-      //msg.channel.send('Command is still in early development! Please check back later.');
-      var guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+      msg.channel.send('Command is still in early development! Please check back later.');
+      /*var guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       let args = msg.content.split(' ');
       let query;
       if(args.length < 2) return msg.channel.send('Usage: ' + prefix + 'play <SearchText>');
@@ -822,10 +828,10 @@ client.on('message', (msg) => {
         if(!msg.member.voice.channel) return msg.channel.send('You are not in a voice channel!');
         msg.member.voice.channel.join() .then(c => {
           guildsettings.activeVC = c;
-          musicBotAPI.play(query, c, msg.guild.id);
         });
       }
-      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
+      musicBotAPI.play(query, guildsettings.activeVC, msg.guild.id);
+      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));*/
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'stop')) {
       msg.channel.send('Command is still in early development! Please check back later.');
@@ -845,7 +851,7 @@ client.on('message', (msg) => {
     else if(msg.content.toLowerCase().startsWith(prefix + 'remove')) {
       msg.channel.send('Command is still in early development! Please check back later.');
     }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'disconnect')) {
+    else if(msg.content.toLowerCase().startsWith(prefix + 'disconnect') || msg.content.toLowerCase().startsWith(prefix + 'dc')) {
       msg.channel.send('Command is still in early development! Please check back later.');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'join')) {
