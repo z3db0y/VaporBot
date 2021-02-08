@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -569,7 +569,7 @@ client.on('message', (msg) => {
           })
           if(isDevGuild) {
             developerServers[developerServers.length] = g.id;
-            return;
+            break;
           }
         });
         /*if(premiumAPI.guildIsGold(g.id)) {
