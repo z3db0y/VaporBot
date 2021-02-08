@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -14,8 +14,7 @@ const guildAPI = new GuildAPI.GuildAPI();
 const { exit } = require('process');
 const RainbowRoleAPI = require('./rainbowRoleAPI');
 const rainbowRoleAPI = new RainbowRoleAPI.RainbowRole();
-//const MusicBotAPI = require('./musicBotAPI');
-//const musicBotAPI = new MusicBotAPI();
+//const musicBotAPI = require('./musicBotAPI');
 
 client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
@@ -101,6 +100,10 @@ client.on('message', (msg) => {
                     value: "Shows a user's warnings."
                 },
                 {
+                    name: prefix + "purge",
+                    value: "Removes amount of messages specified."
+                },
+                {
                     name: prefix + "play",
                     value: "Plays a song in your voice channel."
                 },
@@ -125,6 +128,14 @@ client.on('message', (msg) => {
                     value: "Removes a song from the queue (music bot)."
                 },
                 {
+                    name: prefix + "join",
+                    value: "Makes bot join your voice channel."
+                },
+                {
+                    name: prefix + "disconnect | " + prefix + "dc",
+                    value: "Makes bot leave your voice channel."
+                },
+                {
                     name: prefix + "autokick",
                     value: "Set amount of warnings before a user is automatically kicked from the server."
                 },
@@ -143,10 +154,6 @@ client.on('message', (msg) => {
                 {
                     name: prefix + "setprefix",
                     value: "Update the guild's prefix."
-                },
-                {
-                    name: prefix + "purge",
-                    value: "Removes amount of messages specified."
                 }
             ],
             timestamp: new Date()
@@ -754,6 +761,14 @@ client.on('message', (msg) => {
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'play')) {
       msg.channel.send('Command is still in early development! Please check back later.');
+      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+      if(!guildsettings.activeVC) {
+        if(!msg.member.voice) return msg.channel.send('You are not in a voice channel!');
+        msg.member.voice.channel.join() .then(c => {
+          guildSettings.activeVC = c;
+        });
+      }
+      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'stop')) {
       msg.channel.send('Command is still in early development! Please check back later.');
@@ -773,8 +788,13 @@ client.on('message', (msg) => {
     else if(msg.content.toLowerCase().startsWith(prefix + 'remove')) {
       msg.channel.send('Command is still in early development! Please check back later.');
     }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'disconnect')) {
+      msg.channel.send('Command is still in early development! Please check back later.');
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'join')) {
+      msg.channel.send('Command is still in early development! Please check back later.');
+    }
 });
-
 
 
 
