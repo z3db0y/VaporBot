@@ -891,10 +891,13 @@ developerEmitter.on('devRemoved', (userID) => {
 
 developerEmitter.on('devAdded', (userID) => {
   client.guilds.cache.forEach(g => {
-    let user = g.members.fetch(userID);
+    let userResolvable = g.members.fetch(userID);
+    let user;
     let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
-    if(user && guildsettings.devRole) {
-      user = Promise.resolve(user);
+    if(userResolvable && guildsettings.devRole) {
+      userResolvable.then(value => {
+        userResolvable = value;
+      });
       if(!user.roles.has(guildsettings.devRole)) user.roles.remove(guildsettings.devRole);
     }
   });
