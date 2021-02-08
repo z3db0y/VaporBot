@@ -20,7 +20,7 @@ const { EventEmitter } = require('events');
 
 class DeveloperEvents extends EventEmitter {
   emitEvent(event) {
-    var args = arguments;
+    var args = Array.from(arguments);
     args.splice(0, 1);
     emit(event, args);
   }
