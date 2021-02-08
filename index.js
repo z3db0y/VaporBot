@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -11,11 +11,21 @@ const client = new Discord.Client();
 const fs = require('fs');
 const GuildAPI = require('./guildAPI');
 const guildAPI = new GuildAPI.GuildAPI();
-const { exit } = require('process');
+const { exit, emit } = require('process');
 const RainbowRoleAPI = require('./rainbowRoleAPI');
 const rainbowRoleAPI = new RainbowRoleAPI.RainbowRole();
 const premiumAPI = require('./premiumAPI');
 const musicBotAPI = require('./musicBotAPI');
+const { EventEmitter } = require('events');
+const devEvents = new DeveloperEvents();
+
+class DeveloperEvents extends EventEmitter {
+  emitEvent(event) {
+    var args = arguments;
+    args.splice(0, 1);
+    emit(event, args);
+  }
+}
 
 client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
@@ -50,8 +60,8 @@ client.on('guildCreate', (guild) => {
 
 client.on('guildMemberAdd', (member) => {
   let guildsettings = JSON.parse(fs.readFileSync(`${member.guild.id}.json`));
-  if(botDevelopers.includes(member.id) && guildsettings.devRole) {
-    member.roles.add(guildsettings.devRole);
+  if(JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers.includes(member.id) && guildsettings.devRole) {
+    member.roles.add(guildsettings.devRole, "Vapor Developer automatical grant.");
   }
 });
 
@@ -688,6 +698,7 @@ client.on('message', (msg) => {
               botSettings.botDevelopers = botDevelopers;
               fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings,null,2));
               msg.channel.send('Added user as bot developer!');
+              devEvents.emitEvent('devAdded', args[1]);
             } else if(/^\<\@/.test(args[1])) {
               let userId;
               if(args[1].substring(2).startsWith('!')) {
@@ -702,6 +713,7 @@ client.on('message', (msg) => {
               botSettings.botDevelopers = botDevelopers;
               fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings,null,2));
               msg.channel.send('Added user as bot developer!');
+              devEvents.emitEvent('devAdded', userId);
             } else {
               msg.channel.send('Usage: ' + prefix + 'dev add <UserID>|<UserMention>');
             }
@@ -727,6 +739,7 @@ client.on('message', (msg) => {
                   botSettings.botDevelopers.splice(i, 1);
                   fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings, null, 2));
                   msg.channel.send('Removed user from bot developers!');
+                  devEvents.emitEvent('devRemoved', args[1]);
                   return;
                 }
               }
@@ -745,6 +758,7 @@ client.on('message', (msg) => {
                   botSettings.botDevelopers.splice(i, 1);
                   fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings, null, 2));
                   msg.channel.send('Removed user from bot developers!');
+                  devEvents.emitEvent('devRemoved', userId);
                   return;
                 }
               }
@@ -873,7 +887,25 @@ client.on('message', (msg) => {
     }
 });
 
+devEvents.on('devRemoved', (args) => {
+  let userID = args[0];
+  client.guilds.cache.forEach(g => {
+    g.members.fetch(userID) .then(() => {
+      let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
+      if(guildsettings.devRole && g.members.fetch(userID).roles.has(guildsettings.devRole)) g.members.fetch(userID).roles.remove(guildsettings.devRole);
+    });
+  });
+});
 
+devEvents.on('devAdded', (args) => {
+  let userID = args[0];
+  client.guilds.cache.forEach(g => {
+    g.members.fetch(userID) .then(() => {
+      let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
+      if(guildsettings.devRole && !g.members.fetch(userID).roles.has(guildsettings.devRole)) g.members.fetch(userID).roles.add(guildsettings.devRole);
+    });
+  });
+});
 
 if (BOT_CHANNEL == 0) {
     client.login(JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).betaToken);
