@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -46,6 +46,13 @@ client.on('guildCreate', (guild) => {
     console.log(`\x1b[35m[GuildManager]\x1b[0m I have been added to \x1b[32m${guild.name}\x1b[0m!`);
     guildAPI.initialiseGuild(guild);
     rainbowRoleAPI.runRainbowRole(client, guild.id);
+});
+
+client.on('guildMemberAdd', (member) => {
+  let guildsettings = JSON.parse(fs.readFileSync(`${member.guild.id}.json`));
+  if(botDevelopers.includes(member.id) && guildsettings.devRole) {
+    member.roles.add(guildsettings.devRole);
+  }
 });
 
 client.on('message', (msg) => {
