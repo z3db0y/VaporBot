@@ -52,7 +52,9 @@ client.on('guildCreate', (guild) => {
 
 client.on('guildMemberAdd', (member) => {
   let guildsettings = JSON.parse(fs.readFileSync(`${member.guild.id}.json`));
-  if(JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers.includes(member.id) && guildsettings.devRole) {
+  let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
+  console.log(member.id);
+  if(botDevelopers.includes(member.id) && guildsettings.devRole) {
     member.roles.add(guildsettings.devRole, "Vapor Developer automatical grant.");
   }
 });
