@@ -763,9 +763,9 @@ client.on('message', (msg) => {
           break;
         case 'role':
           console.log(args);
-          if(args.length < 3) return msg.channel.send('Usage: ' + prefix + 'dev role <RoleID>|<RoleMention>');
+          if(args.length < 2) return msg.channel.send('Usage: ' + prefix + 'dev role <RoleID>|<RoleMention>');
           let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-          let role = args[2].replace('<&', '').replace('>', '');
+          let role = args[1].replace('<&', '').replace('>', '');
           if(role === 'none') {
             guildsettings.devRole = null;
             fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
