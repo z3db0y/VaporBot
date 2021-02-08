@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -20,7 +20,7 @@ const { EventEmitter } = require('events');
 
 class DeveloperEvents extends EventEmitter {
   emitEvent(event) {
-    var args = arguments;
+    var args = Array.from(arguments);
     args.splice(0, 1);
     emit(event, args);
   }
