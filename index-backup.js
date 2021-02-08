@@ -14,6 +14,7 @@ const guildAPI = new GuildAPI.GuildAPI();
 const { exit } = require('process');
 const RainbowRoleAPI = require('./rainbowRoleAPI');
 const rainbowRoleAPI = new RainbowRoleAPI.RainbowRole();
+const premiumAPI = require('./premiumAPI');
 //const musicBotAPI = require('./musicBotAPI');
 
 client.on('ready', () => {
@@ -572,7 +573,7 @@ client.on('message', (msg) => {
             developerServers[developerServers.length] = g.id;
           }
         });
-        /*if(premiumAPI.guildIsGold(g.id)) {
+        if(premiumAPI.guildIsGold(g.id)) {
           goldServers[goldServers.length] = g.id;
           return;
         }
@@ -582,7 +583,7 @@ client.on('message', (msg) => {
         }
         if(premiumAPI.guildIsBronze(g.id)) {
           bronzeServers[bronzeServers.length] = g.id;
-        }*/
+        }
       });
       msg.channel.send({embed: {
           title: "Vapor Stats",
@@ -600,15 +601,15 @@ client.on('message', (msg) => {
                   value: "*.*"
               },
               {
-                  name: "Vapor Bronze (Free) Guild Count: **" + client.guilds.cache.size + "**" /* bronzeServers.length */,
+                  name: "Vapor Bronze (Free) Guild Count: **" + bronzeServers.length + "**",
                   value: "*.*"
               },
               {
-                  name: "Vapor Silver Guild Count: **0**" /* silverServers.length */,
+                  name: "Vapor Silver Guild Count: **" + silverServers.length + "**",
                   value: "*.*"
               },
               {
-                  name: "Vapor Gold Guild Count: **0**" /* goldServers.length */,
+                  name: "Vapor Gold Guild Count: **" + goldServers.length + "**",
                   value: "*.*"
               },
               {
