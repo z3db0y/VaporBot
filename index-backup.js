@@ -15,7 +15,7 @@ const { exit } = require('process');
 const RainbowRoleAPI = require('./rainbowRoleAPI');
 const rainbowRoleAPI = new RainbowRoleAPI.RainbowRole();
 const premiumAPI = require('./premiumAPI');
-//const musicBotAPI = require('./musicBotAPI');
+const musicBotAPI = require('./musicBotAPI');
 
 client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
@@ -813,11 +813,16 @@ client.on('message', (msg) => {
       //msg.channel.send('Command is still in early development! Please check back later.');
       var guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       let args = msg.content.split(' ');
+      let query;
       if(args.length < 2) return msg.channel.send('Usage: ' + prefix + 'play <SearchText>');
+      let newArgs = args;
+      newArgs.splice(0, 1);
+      query = newArgs.join(' ');
       if(!guildsettings.activeVC) {
         if(!msg.member.voice.channel) return msg.channel.send('You are not in a voice channel!');
         msg.member.voice.channel.join() .then(c => {
           guildsettings.activeVC = c;
+          musicBotAPI.play(query, c, msg.guild.id);
         });
       }
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
