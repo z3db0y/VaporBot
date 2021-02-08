@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -52,7 +52,9 @@ client.on('guildCreate', (guild) => {
 
 client.on('guildMemberAdd', (member) => {
   let guildsettings = JSON.parse(fs.readFileSync(`${member.guild.id}.json`));
-  if(JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers.includes(member.id) && guildsettings.devRole) {
+  let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
+  console.log(member.id);
+  if(botDevelopers.includes(member.id) && guildsettings.devRole) {
     member.roles.add(guildsettings.devRole, "Vapor Developer automatical grant.");
   }
 });
@@ -690,7 +692,8 @@ client.on('message', (msg) => {
               botSettings.botDevelopers = botDevelopers;
               fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings,null,2));
               msg.channel.send('Added user as bot developer!');
-              developerEmitter.emit('devAdded', args[1]);
+              let userID = args[1];
+              developerEmitter.emit('devAdded', userID);
             } else if(/^\<\@/.test(args[1])) {
               let userId;
               if(args[1].substring(2).startsWith('!')) {
@@ -885,7 +888,7 @@ developerEmitter.on('devRemoved', (userID) => {
     let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
     if(userResolvable && guildsettings.devRole) {
       userResolvable.then(user => {
-        if(user.roles.cache.has(guildsettings.devRole)) user.roles.remove(guildsettings.devRole);
+        if(user.roles.cache.has(guildsettings.devRole)) user.roles.remove(guildsettings.devRole, "Vapor Developer automatical removal.");
       });
     }
   });
@@ -897,7 +900,7 @@ developerEmitter.on('devAdded', (userID) => {
     let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
     if(userResolvable && guildsettings.devRole) {
       userResolvable.then(user => {
-        if(!user.roles.cache.has(guildsettings.devRole)) user.roles.add(guildsettings.devRole);
+        user.roles.add(guildsettings.devRole, "Vapor Developer automatical grant.");
       });
     }
   });
