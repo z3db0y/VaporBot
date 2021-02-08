@@ -762,6 +762,7 @@ client.on('message', (msg) => {
           msg.channel.send('This channel will now receive update logs!');
           break;
         case 'role':
+          console.log(args);
           if(args.length < 3) return msg.channel.send('Usage: ' + prefix + 'dev role <RoleID>|<RoleMention>');
           let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
           let role = args[2].replace('<&', '').replace('>', '');
