@@ -882,7 +882,7 @@ client.on('message', (msg) => {
 
 developerEmitter.on('devRemoved', (userID) => {
   client.guilds.cache.forEach(g => {
-    let userResolvable = g.members.fetch(userID) .catch(err => {});
+    let userResolvable = g.members.fetch(userID) .catch(err => console.log(`\x1b[31m[DEV ERROR] \x1b[0m` + err.message));
     let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
     if(userResolvable && guildsettings.devRole) {
       userResolvable.then(user => {
@@ -894,7 +894,7 @@ developerEmitter.on('devRemoved', (userID) => {
 
 developerEmitter.on('devAdded', (userID) => {
   client.guilds.cache.forEach(g => {
-    let userResolvable = g.members.fetch(userID) .catch(err => {});
+    let userResolvable = g.members.fetch(userID) .catch(err => console.log(`\x1b[31m[DEV ERROR] \x1b[0m` + err.message));
     let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
     if(userResolvable && guildsettings.devRole) {
       userResolvable.then(user => {
