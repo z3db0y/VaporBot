@@ -762,7 +762,6 @@ client.on('message', (msg) => {
           msg.channel.send('This channel will now receive update logs!');
           break;
         case 'role':
-          console.log(args);
           if(args.length < 2) return msg.channel.send('Usage: ' + prefix + 'dev role <RoleID>|<RoleMention>');
           let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
           let role = args[1].replace('<&', '').replace('>', '');
@@ -773,7 +772,10 @@ client.on('message', (msg) => {
           }
           let roleIsValid = (msg.guild.roles.cache.get(role));
 
-          if(!roleIsValid) console.log('Invalid Role!');
+          if(!roleIsValid) return msg.channel.send('Invalid Role!');
+          guildsettings.devRole = role;
+          fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
+          msg.channel.send(`Set developer role to **${msg.guild.roles.cache.get(role).name}**!`);
           break;
         case 'help':
           msg.channel.send({ embed: {
