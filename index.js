@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -573,15 +573,15 @@ client.on('message', (msg) => {
             developerServers[developerServers.length] = g.id;
           }
         });
-        if(premiumAPI.guildIsGold(g.id)) {
+        if(premiumAPI.guildIsGold(g.id) && !developerServers.includes(g.id)) {
           goldServers[goldServers.length] = g.id;
           return;
         }
-        if(premiumAPI.guildIsSilver(g.id)) {
+        if(premiumAPI.guildIsSilver(g.id) && !developerServers.includes(g.id)) {
           silverServers[silverServers.length] = g.id;
           return;
         }
-        if(premiumAPI.guildIsBronze(g.id)) {
+        if(premiumAPI.guildIsBronze(g.id) && !developerServers.includes(g.id)) {
           bronzeServers[bronzeServers.length] = g.id;
         }
       });
