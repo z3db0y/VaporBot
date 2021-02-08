@@ -563,7 +563,7 @@ client.on('message', (msg) => {
 
       client.guilds.cache.forEach(g => {
         botDevelopers.forEach(dev => {
-          if(g.members.cache.has(dev.id)) {
+          if(g.members.fetch(dev)) {
             developerServers[developerServers.length] = g.id;
             return;
           }
@@ -596,7 +596,7 @@ client.on('message', (msg) => {
                   value: "*.*"
               },
               {
-                  name: "Vapor Bronze (Free) Guild Count **" + client.guilds.cache.size + "**" /* bronzeServers.length */,
+                  name: "Vapor Bronze (Free) Guild Count: **" + client.guilds.cache.size + "**" /* bronzeServers.length */,
                   value: "*.*"
               },
               {
