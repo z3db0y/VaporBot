@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -881,15 +881,25 @@ client.on('message', (msg) => {
 
 developerEmitter.on('devRemoved', (userID) => {
   client.guilds.cache.forEach(g => {
-    let user = g.members.resolve(userID);
-    console.dir(user);
+    let userResolvable = g.members.fetch(userID) .catch(err => {});
+    let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
+    if(userResolvable && guildsettings.devRole) {
+      userResolvable.then(user => {
+        if(user.roles.cache.has(guildsettings.devRole)) user.roles.remove(guildsettings.devRole);
+      });
+    }
   });
 });
 
 developerEmitter.on('devAdded', (userID) => {
   client.guilds.cache.forEach(g => {
-    let user = g.members.resolve(userID);
-    console.dir(user);
+    let userResolvable = g.members.fetch(userID) .catch(err => {});
+    let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
+    if(userResolvable && guildsettings.devRole) {
+      userResolvable.then(user => {
+        if(!user.roles.cache.has(guildsettings.devRole)) user.roles.add(guildsettings.devRole);
+      });
+    }
   });
 });
 
