@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -16,9 +16,9 @@ const RainbowRoleAPI = require('./rainbowRoleAPI');
 const rainbowRoleAPI = new RainbowRoleAPI.RainbowRole();
 const premiumAPI = require('./premiumAPI');
 const musicBotAPI = require('./musicBotAPI');
-const { EventEmitter } = require('events');
+const events = require('events');
 
-class DeveloperEvents extends EventEmitter {
+class DeveloperEvents extends events.EventEmitter {
   emitEvent(event) {
     var args = Array.from(arguments);
     args.splice(0, 1);
