@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -53,7 +53,6 @@ client.on('guildCreate', (guild) => {
 client.on('guildMemberAdd', (member) => {
   let guildsettings = JSON.parse(fs.readFileSync(`${member.guild.id}.json`));
   let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
-  console.log(member.id);
   if(botDevelopers.includes(member.id) && guildsettings.devRole) {
     member.roles.add(guildsettings.devRole, "Vapor Developer automatical grant.");
   }
@@ -888,7 +887,7 @@ developerEmitter.on('devRemoved', (userID) => {
     let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
     if(userResolvable && guildsettings.devRole) {
       userResolvable.then(user => {
-        if(user.roles.cache.has(guildsettings.devRole)) user.roles.remove(guildsettings.devRole, "Vapor Developer automatical removal.");
+        user.roles.remove(guildsettings.devRole, "Vapor Developer automatical removal.");
       });
     }
   });
