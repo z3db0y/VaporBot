@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -567,9 +567,9 @@ client.on('message', (msg) => {
           g.members.fetch(dev) .catch(err => {
             if(err.message === 'Unknown Member') isDevGuild = false;
           })
+          if(developerServers.includes(g.id)) return;
           if(isDevGuild) {
             developerServers[developerServers.length] = g.id;
-            break;
           }
         });
         /*if(premiumAPI.guildIsGold(g.id)) {
