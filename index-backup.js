@@ -881,10 +881,12 @@ client.on('message', (msg) => {
 
 developerEmitter.on('devRemoved', (userID) => {
   client.guilds.cache.forEach(g => {
-    let user = g.members.fetch(userID);
+    let userResolvable = g.members.fetch(userID);
     let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
-    if(user && guildsettings.devRole) {
-      if(user.roles.has(guildsettings.devRole)) user.roles.remove(guildsettings.devRole);
+    if(userResolvable && guildsettings.devRole) {
+      userResolvable.then(user => {
+        if(user.roles.cache.has(guildsettings.devRole)) user.roles.remove(guildsettings.devRole);
+      });
     }
   });
 });
@@ -892,13 +894,11 @@ developerEmitter.on('devRemoved', (userID) => {
 developerEmitter.on('devAdded', (userID) => {
   client.guilds.cache.forEach(g => {
     let userResolvable = g.members.fetch(userID);
-    let user;
     let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
     if(userResolvable && guildsettings.devRole) {
-      userResolvable.then(value => {
-        userResolvable = value;
+      userResolvable.then(user => {
+        if(!user.roles.cache.has(guildsettings.devRole)) user.roles.add(guildsettings.devRole);
       });
-      if(!user.roles.has(guildsettings.devRole)) user.roles.remove(guildsettings.devRole);
     }
   });
 });
