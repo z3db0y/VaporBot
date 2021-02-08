@@ -818,6 +818,7 @@ client.on('message', (msg) => {
           guildSettings.activeVC = c;
         });
       }
+      guildSettings.activeVC.setSpeaking('none');
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));*/
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'stop')) {
