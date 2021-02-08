@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -762,9 +762,10 @@ client.on('message', (msg) => {
           msg.channel.send('This channel will now receive update logs!');
           break;
         case 'role':
-          if(args.length < 3) return msg.channel.send('Usage: ' + prefix + 'dev role <RoleID>|<RoleMention>');
+          console.log(args);
+          if(args.length < 2) return msg.channel.send('Usage: ' + prefix + 'dev role <RoleID>|<RoleMention>');
           let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-          let role = args[2].replace('<&', '').replace('>', '');
+          let role = args[1].replace('<&', '').replace('>', '');
           if(role === 'none') {
             guildsettings.devRole = null;
             fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
