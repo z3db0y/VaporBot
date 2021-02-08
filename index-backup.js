@@ -569,7 +569,7 @@ client.on('message', (msg) => {
           })
           if(isDevGuild) {
             developerServers[developerServers.length] = g.id;
-            return;
+            break;
           }
         });
         /*if(premiumAPI.guildIsGold(g.id)) {
