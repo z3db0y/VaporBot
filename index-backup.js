@@ -393,7 +393,13 @@ client.on('message', (msg) => {
         reason = newArgs.join(' ');
       }
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-      let warning     }
+      let warnings = guildsettings.warnings;
+      let warnUser = warnings.find(e => e.user === userID);
+      if(!warnUser) {
+        warnings[warnings.length] = {
+          "user": userID,
+          "warns": []
+        }
         warnUser = warnings.find(e => e.user === userID);
       }
       let useReason = false;
