@@ -882,14 +882,20 @@ client.on('message', (msg) => {
 developerEmitter.on('devRemoved', (userID) => {
   client.guilds.cache.forEach(g => {
     let user = g.members.fetch(userID);
-    console.dir(user);
+    let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
+    if(user && guildsettings.devRole) {
+      if(user.roles.has(guildsettings.devRole)) user.roles.remove(guildsettings.devRole);
+    }
   });
 });
 
 developerEmitter.on('devAdded', (userID) => {
   client.guilds.cache.forEach(g => {
     let user = g.members.fetch(userID);
-    console.dir(user);
+    let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
+    if(user && guildsettings.devRole) {
+      if(!user.roles.has(guildsettings.devRole)) user.roles.remove(guildsettings.devRole);
+    }
   });
 });
 
