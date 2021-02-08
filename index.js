@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -563,7 +563,7 @@ client.on('message', (msg) => {
 
       client.guilds.cache.forEach(g => {
         botDevelopers.forEach(dev => {
-          if(g.members.cache.has(dev.id)) {
+          if(g.members.fetch(dev)) {
             developerServers[developerServers.length] = g.id;
             return;
           }
@@ -596,7 +596,7 @@ client.on('message', (msg) => {
                   value: "*.*"
               },
               {
-                  name: "Vapor Bronze (Free) Guild Count **" + client.guilds.cache.size + "**" /* bronzeServers.length */,
+                  name: "Vapor Bronze (Free) Guild Count: **" + client.guilds.cache.size + "**" /* bronzeServers.length */,
                   value: "*.*"
               },
               {
