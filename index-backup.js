@@ -812,11 +812,15 @@ client.on('message', (msg) => {
     else if(msg.content.toLowerCase().startsWith(prefix + 'play')) {
       //msg.channel.send('Command is still in early development! Please check back later.');
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+      let args = msg.content.split(' ');
+      if(args.length < 2) return msg.channel.send('Invalid link/search query!');
       if(!guildsettings.activeVC) {
         if(!msg.member.voice.channel) return msg.channel.send('You are not in a voice channel!');
+        let connection;
         msg.member.voice.channel.join() .then(c => {
-          guildSettings.activeVC = c;
+          connection = c;
         });
+        guildsettings.activeVC = connection;
       }
       guildSettings.activeVC.setSpeaking('none');
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
