@@ -17,14 +17,7 @@ const rainbowRoleAPI = new RainbowRoleAPI.RainbowRole();
 const premiumAPI = require('./premiumAPI');
 const musicBotAPI = require('./musicBotAPI');
 const events = require('events');
-
-class DeveloperEvents extends events.EventEmitter {
-  emitEvent(event) {
-    var args = Array.from(arguments);
-    args.splice(0, 1);
-    emit(event, args);
-  }
-}
+const developerEmitter = new events.EventEmitter();
 
 const devEvents = new DeveloperEvents();
 
@@ -699,7 +692,7 @@ client.on('message', (msg) => {
               botSettings.botDevelopers = botDevelopers;
               fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings,null,2));
               msg.channel.send('Added user as bot developer!');
-              devEvents.emitEvent('devAdded', args[1]);
+              developerEmitter.emit('devAdded', args[1]);
             } else if(/^\<\@/.test(args[1])) {
               let userId;
               if(args[1].substring(2).startsWith('!')) {
@@ -714,7 +707,7 @@ client.on('message', (msg) => {
               botSettings.botDevelopers = botDevelopers;
               fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings,null,2));
               msg.channel.send('Added user as bot developer!');
-              devEvents.emitEvent('devAdded', userId);
+              developerEmitter.emit('devAdded', userId);
             } else {
               msg.channel.send('Usage: ' + prefix + 'dev add <UserID>|<UserMention>');
             }
@@ -740,7 +733,7 @@ client.on('message', (msg) => {
                   botSettings.botDevelopers.splice(i, 1);
                   fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings, null, 2));
                   msg.channel.send('Removed user from bot developers!');
-                  devEvents.emitEvent('devRemoved', args[1]);
+                  developerEmitter.emit('devRemoved', args[1]);
                   return;
                 }
               }
@@ -759,7 +752,7 @@ client.on('message', (msg) => {
                   botSettings.botDevelopers.splice(i, 1);
                   fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings, null, 2));
                   msg.channel.send('Removed user from bot developers!');
-                  devEvents.emitEvent('devRemoved', userId);
+                  developerEmitter.emit('devRemoved', userId);
                   return;
                 }
               }
@@ -888,8 +881,7 @@ client.on('message', (msg) => {
     }
 });
 
-devEvents.on('devRemoved', (args) => {
-  let userID = args[0];
+developerEmitter.on('devRemoved', (userID) => {
   client.guilds.cache.forEach(g => {
     g.members.fetch(userID) .then(() => {
       let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
@@ -898,8 +890,7 @@ devEvents.on('devRemoved', (args) => {
   });
 });
 
-devEvents.on('devAdded', (args) => {
-  let userID = args[0];
+developerEmitter.on('devAdded', (userID) => {
   client.guilds.cache.forEach(g => {
     g.members.fetch(userID) .then(() => {
       let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
