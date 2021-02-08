@@ -767,7 +767,7 @@ client.on('message', (msg) => {
           let role = args[2].replace('<&', '').replace('>', '');
           if(role === 'none') {
             guildsettings.devRole = null;
-            fs.writeFileSync(`${msg.guild.id}.json` JSON.stringify(guildsettings, null, 2));
+            fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
             return;
           }
           let roleIsValid = true;
