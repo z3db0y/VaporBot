@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -881,19 +881,15 @@ client.on('message', (msg) => {
 
 developerEmitter.on('devRemoved', (userID) => {
   client.guilds.cache.forEach(g => {
-    g.members.resolve(userID) .then(() => {
-      let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
-      if(guildsettings.devRole && g.members.resolve(userID).roles.cache.has(guildsettings.devRole)) g.members.resolve(userID).roles.remove(guildsettings.devRole);
-    });
+    let user = g.members.resolve(userID);
+    console.dir(user);
   });
 });
 
 developerEmitter.on('devAdded', (userID) => {
   client.guilds.cache.forEach(g => {
-    g.members.fetch(userID) .then(() => {
-      let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
-      if(guildsettings.devRole && !g.members.fetch(userID).roles.has(guildsettings.devRole)) g.members.fetch(userID).roles.add(guildsettings.devRole);
-    });
+    let user = g.members.resolve(userID);
+    console.dir(user);
   });
 });
 
