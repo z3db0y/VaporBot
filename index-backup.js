@@ -16,9 +16,9 @@ const RainbowRoleAPI = require('./rainbowRoleAPI');
 const rainbowRoleAPI = new RainbowRoleAPI.RainbowRole();
 const premiumAPI = require('./premiumAPI');
 const musicBotAPI = require('./musicBotAPI');
-const { EventEmitter } = require('events');
+const events = require('events');
 
-class DeveloperEvents extends EventEmitter {
+class DeveloperEvents extends events.EventEmitter {
   emitEvent(event) {
     var args = Array.from(arguments);
     args.splice(0, 1);
