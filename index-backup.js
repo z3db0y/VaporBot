@@ -765,6 +765,11 @@ client.on('message', (msg) => {
           if(args.length < 3) return msg.channel.send('Usage: ' + prefix + 'dev role <RoleID>|<RoleMention>');
           let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
           let role = args[2].replace('<&', '').replace('>', '');
+          if(role === 'none') {
+            guildsettings.devRole = null;
+            fs.writeFileSync(`${msg.guild.id}.json` JSON.stringify(guildsettings, null, 2));
+            return;
+          }
           let roleIsValid = true;
           msg.guild.roles.fetch(role) .catch(err => {
             console.log(err.message);
