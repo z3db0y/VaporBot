@@ -771,10 +771,8 @@ client.on('message', (msg) => {
             fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
             return;
           }
-          let roleIsValid = true;
-          msg.guild.roles.fetch(role) .catch(err => {
-            roleIsValid = false;
-          });
+          let roleIsValid = (msg.guild.roles.cache.get(role));
+
           if(!roleIsValid) console.log('Invalid Role!');
           break;
         case 'help':
