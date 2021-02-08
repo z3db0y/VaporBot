@@ -7,7 +7,7 @@ const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
-const client = new Discord.Client({ws: {intents: ['DIRECT_MESSAGES', 'GUILDS', 'GUILD_BANS', 'GUILD_EMOJIS', 'GUILD_INVITES', 'GUILD_MEMBERS', 'GUILD_MESSAGES', 'GUILD_MESSAGE_REACTIONS', 'GUILD_VOICE_STATES', 'DIRECT_MESSAGE_REACTIONS']}});
+const client = new Discord.Client();
 const fs = require('fs');
 const GuildAPI = require('./guildAPI');
 const guildAPI = new GuildAPI.GuildAPI();
