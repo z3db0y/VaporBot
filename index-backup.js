@@ -773,8 +773,9 @@ client.on('message', (msg) => {
           }
           let roleIsValid = true;
           msg.guild.roles.fetch(role) .catch(err => {
-            console.log(err.message);
+            roleIsValid = false;
           });
+          if(!roleIsValid) console.log('Invalid Role!');
           break;
         case 'help':
           msg.channel.send({ embed: {
