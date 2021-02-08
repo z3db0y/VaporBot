@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -556,6 +556,30 @@ client.on('message', (msg) => {
       };
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'info')) {
+      let developerServers = [];
+      let goldServers = [];
+      let silverServers = [];
+      let bronzeServers = [];
+
+      client.guilds.cache.forEach(g => {
+        botDevelopers.forEach(dev => {
+          if(g.members.cache.has(dev.id)) {
+            developerServers[developerServers.length] = g.id;
+            return;
+          }
+        });
+        /*if(premiumAPI.guildIsGold(g.id)) {
+          goldServers[goldServers.length] = g.id;
+          return;
+        }
+        if(premiumAPI.guildIsSilver(g.id)) {
+          silverServers[silverServers.length] = g.id;
+          return;
+        }
+        if(premiumAPI.guildIsBronze(g.id)) {
+          bronzeServers[bronzeServers.length] = g.id;
+        }*/
+      });
       msg.channel.send({embed: {
           title: "Vapor Stats",
           color: '0x' + msg.guild.me.displayHexColor.substring(1),
@@ -572,11 +596,19 @@ client.on('message', (msg) => {
                   value: "*.*"
               },
               {
-                  name: "Vapor Silver Guild Count: **0**",
+                  name: "Vapor Bronze (Free) Guild Count **" + client.guilds.cache.size + "**" /* bronzeServers.length */,
                   value: "*.*"
               },
               {
-                  name: "Vapor Gold Guild Count: **0**",
+                  name: "Vapor Silver Guild Count: **0**" /* silverServers.length */,
+                  value: "*.*"
+              },
+              {
+                  name: "Vapor Gold Guild Count: **0**" /* goldServers.length */,
+                  value: "*.*"
+              },
+              {
+                  name: "Vapor Developer Guild Count: **" + developerServers.length + "**",
                   value: "*.*"
               },
               {
@@ -584,7 +616,7 @@ client.on('message', (msg) => {
                   value: "*.*"
               },
               {
-                  name: "This Guild's Type: **Bronze**",
+                  name: "This Guild's Type: **Bronze**" /* + premiumAPI.getGuildType(msg.guild.id) + "**"*/,
                   value: "*.*"
               }
           ],
