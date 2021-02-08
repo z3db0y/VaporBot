@@ -621,7 +621,7 @@ client.on('message', (msg) => {
                   value: "*.*"
               },
               {
-                  name: "This Guild's Type: **" + premiumAPI.getGuildType(msg.guild.id) + "**",
+                  name: "This Guild's Type: **" + premiumAPI.getGuildType(msg.guild.id, client) + "**",
                   value: "*.*"
               }
           ],
