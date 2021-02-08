@@ -813,7 +813,7 @@ client.on('message', (msg) => {
       //msg.channel.send('Command is still in early development! Please check back later.');
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       if(!guildsettings.activeVC) {
-        if(!msg.member.voice) return msg.channel.send('You are not in a voice channel!');
+        if(!msg.member.voice.channel) return msg.channel.send('You are not in a voice channel!');
         msg.member.voice.channel.join() .then(c => {
           guildSettings.activeVC = c;
         });
