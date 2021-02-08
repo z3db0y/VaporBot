@@ -881,14 +881,14 @@ client.on('message', (msg) => {
 
 developerEmitter.on('devRemoved', (userID) => {
   client.guilds.cache.forEach(g => {
-    let user = g.members.resolve(userID);
+    let user = g.members.fetch(userID);
     console.dir(user);
   });
 });
 
 developerEmitter.on('devAdded', (userID) => {
   client.guilds.cache.forEach(g => {
-    let user = g.members.resolve(userID);
+    let user = g.members.fetch(userID);
     console.dir(user);
   });
 });
