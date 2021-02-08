@@ -813,7 +813,7 @@ client.on('message', (msg) => {
       //msg.channel.send('Command is still in early development! Please check back later.');
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       let args = msg.content.split(' ');
-      if(args.length < 2) return msg.channel.send('Invalid link/search query!');
+      if(args.length < 2) return msg.channel.send('Usage: ' + prefix + 'play <SearchText>');
       if(!guildsettings.activeVC) {
         if(!msg.member.voice.channel) return msg.channel.send('You are not in a voice channel!');
         let connection;
