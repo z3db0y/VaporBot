@@ -26,7 +26,7 @@
       "warns": []
     }
   ],
-  "autokick": 5,
+  "autokick": 1e+41,
   "autoban": 10,
   "musicQueue": []
 }
