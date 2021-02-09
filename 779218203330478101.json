@@ -1,5 +1,5 @@
 {
-  "prefix": "hello",
+  "prefix": ".",
   "logging": {
     "enabled": false,
     "logChannelId": null,
