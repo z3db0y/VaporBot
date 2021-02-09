@@ -25,7 +25,6 @@ function checkUpdate(guildID, client) {
     let latestRelease = releases.find(e => e.fileInt === largestFileInt).filename;
     if(guildSettings.lastLoggedUpdate == latestRelease) return;
     let channelResolvable = client.channels.fetch(guildSettings.updateChannel) .then(channel => {
-        var error = false;
         channel.send({ embed: {
             title: `**Version ${latestRelease.replace('.txt', '')} Released!**`,
             thumbnail: {
@@ -34,14 +33,12 @@ function checkUpdate(guildID, client) {
             color: `0x${channel.guild.me.displayHexColor.substring(1)}`,
             description: `\`\`\`diff\n${fs.readFileSync(__dirname + '/releases/' + latestRelease)}\`\`\``,
             timestamp: new Date()
-        }}) .catch(err => {
-            if(err.message === 'Missing Permissions') console.log(`\x1b[31m[Error] \x1b[0mGuild \x1b[31m${client.channels.cache.get(guildSettings.updateChannel).guild.name} \x1b[0mChannel \x1b[31m\#${client.channels.cache.get(guildSettings.updateChannel).name}\x1b[0m: Missing Text Permissions.`);
-            error = true;
-        });
-        if(!error) {
+        }}) .then(() => {
             guildSettings.lastLoggedUpdate = latestRelease;
             fs.writeFileSync(`${guildID}.json`, JSON.stringify(guildSettings, null, 2));
-        }
+        }) .catch(err => {
+            if(err.message === 'Missing Permissions') console.log(`\x1b[31m[Error] \x1b[0mGuild \x1b[31m${client.channels.cache.get(guildSettings.updateChannel).guild.name} \x1b[0mChannel \x1b[31m\#${client.channels.cache.get(guildSettings.updateChannel).name}\x1b[0m: Missing Text Permissions.`);
+        });
     }) .catch(err => {});
 }
 
