@@ -451,8 +451,9 @@ client.on('message', (msg) => {
         }
       }
       let args = msg.content.split(' ');
+      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       if(args.length < 2) {
-        errorMessage(msg.channel, 'Usage: ' + prefix + 'autokick <Number>');
+        successMessage(msg.channel, `Warnings until ban: **${guildsettings.autoban}**`);
         return;
       }
       if(!/^[0-9]*$/.test(args[1]) && args[1].toLowerCase() !== 'none') return errorMessage(msg.channel, 'Invalid number!')
@@ -461,7 +462,6 @@ client.on('message', (msg) => {
         autokick = 0;
       } else autokick = parseInt(args[1]);
       if(autokick < 0) autokick = 0;
-      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       guildsettings.autokick = autokick;
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
       successMessage(msg.channel, `Set warnings until kick to **${autokick}**!`);
@@ -474,8 +474,9 @@ client.on('message', (msg) => {
         }
       }
       let args = msg.content.split(' ');
+      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       if(args.length < 2) {
-        errorMessage(msg.channel, 'Usage: ' + prefix + 'autoban <Number>');
+        successMessage(msg.channel, `Warnings until ban: **${guildsettings.autoban}**`);
         return;
       }
       if(!/^[0-9]*$/.test(args[1]) && args[1].toLowerCase() !== 'none') return errorMessage(msg.channel, 'Invalid number!')
@@ -484,7 +485,6 @@ client.on('message', (msg) => {
         autoban = 0;
       } else autoban = parseInt(args[1]);
       if(autoban < 0) autoban = 0;
-      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       guildsettings.autoban = autoban;
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
       successMessage(msg.channel, `Set warnings until ban to **${autoban}**!`);
