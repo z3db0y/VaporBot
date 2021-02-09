@@ -16,6 +16,6 @@
     }
   ],
   "autokick": 5,
-  "autoban": 0,
+  "autoban": 10,
   "musicQueue": []
 }
