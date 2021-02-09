@@ -3,31 +3,14 @@
   "logging": {
     "enabled": false,
     "logChannelId": null,
-    "actionsLogged": "none"
+    "actionsLogged": []
   },
   "store": null,
   "rainbowRoles": [],
-  "lastLoggedUpdate": "1.0.3.txt",
-  "updateChannel": "791953054593318923",
-  "warnings": [
-    {
-      "user": "622425350810632192",
-      "warns": []
-    },
-    {
-      "user": "739506912143474781",
-      "warns": [
-        "has a big pp"
-      ]
-    },
-    {
-      "user": "740167253491843094",
-      "warns": []
-    }
-  ],
+  "lastLoggedUpdate": null,
+  "updateChannel": null,
+  "warnings": [],
   "autokick": 0,
   "autoban": 0,
-  "musicQueue": [
-    {}
-  ]
+  "musicQueue": []
 }

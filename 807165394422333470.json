@@ -3,11 +3,14 @@
   "logging": {
     "enabled": false,
     "logChannelId": null,
-    "actionsLogged": "none"
+    "actionsLogged": []
   },
   "store": null,
   "rainbowRoles": [],
-  "updateChannel": "807165551968387102",
-  "lastLoggedUpdate": "1.0.3.txt",
-  "devRole": "807166367249596426"
+  "lastLoggedUpdate": null,
+  "updateChannel": null,
+  "warnings": [],
+  "autokick": 0,
+  "autoban": 0,
+  "musicQueue": []
 }
