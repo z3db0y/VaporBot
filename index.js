@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -915,14 +915,14 @@ developerEmitter.on('devRoleUpdated', (guildID, role, oldRole) => {
     if(oldRole) {
       botDevelopers.forEach(dev => {
         guild.members.fetch(dev) .then(user => {
-          user.roles.remove(oldRole);
-          user.roles.add(role, "Vapor Developer automatical grant.");
+          user.roles.remove(oldRole) .catch(err => {});
+          user.roles.add(role, "Vapor Developer automatical grant.") .catch(err => {});
         }) .catch(err => {});
       });
     } else {
       botDevelopers.forEach(dev => {
         guild.members.fetch(dev) .then(user => {
-          user.roles.add(role, "Vapor Developer automatical grant.");
+          user.roles.add(role, "Vapor Developer automatical grant.") .catch(err => {});
         }) .catch(err => {});
       });
     }
@@ -933,9 +933,8 @@ developerEmitter.on('devRoleRemoved', (guildID, devRoleID) => {
   let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
   client.guilds.fetch(guildID) .then(guild => {
     botDevelopers.forEach(dev => {
-      console.log(dev);
       guild.members.fetch(dev) .then(member => {
-        member.roles.remove(devRoleID);
+        member.roles.remove(devRoleID) .catch(err => {});
       }) .catch(err => {});
     });
   }) .catch(err => {});
