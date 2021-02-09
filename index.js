@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -563,8 +563,8 @@ client.on('message', (msg) => {
       try {
         msg.channel.messages.fetch({limit: purgeAmount}) .then((messages) => {
           messages.forEach(m => m.delete() .catch(err => {}));
+          successMessage(msg.channel, 'Successfully deleted ' + purgeAmount + ' messages!');
         }) .catch(err => { return errorMessage(msg.channel, `Error: ${err.message}`)});
-        successMessage(msg.channel, 'Successfully deleted ' + purgeAmount + ' messages!');
       } catch (err) {
         errorMessage(msg.channel, 'An error has occurred! Please try again.');
       };
