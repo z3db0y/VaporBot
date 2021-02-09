@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -238,19 +238,19 @@ client.on('message', (msg) => {
         let userId = user.substring(2, user.length-1);
         if (userId.startsWith('!')) userId = userId.substring(1);
         if(reason) {
-          msg.guild.members.ban(userId, {reason: reason}) .then(() => {
-            successMessage(msg.channel, `Banned **<@${userId}>** (${userId}) with reason **${reason}**!`);
+          msg.guild.members.ban(userId, {reason: reason}) .then((bannedUser) => {
+            successMessage(msg.channel, `Banned **${bannedUser.tag}** (${userId}) with reason **${reason}**!`);
           }) .catch(err => {});
-        } else msg.guild.members.ban(userId, {reason: `Banned by ${msg.author.tag}`}) .then(() => {
-          successMessage(msg.channel, `Banned **<@${userId}>** (${userId}) with reason **Banned by ${msg.author.tag}**!`);
+        } else msg.guild.members.ban(userId, {reason: `Banned by ${msg.author.tag}`}) .then((bannedUser) => {
+          successMessage(msg.channel, `Banned **${bannedUser.tag}** (${userId}) with reason **Banned by ${msg.author.tag}**!`);
         }) .catch(err => {});
       } else if(/^[0-9]*$/.test(user)) {
         if(reason) {
-          msg.guild.members.ban(user, {reason: reason}) .then(() => {
-            successMessage(msg.channel, `Banned **<@${user}>** (${user}) with reason **${reason}**!`);
+          msg.guild.members.ban(user, {reason: reason}) .then((bannedUser) => {
+            successMessage(msg.channel, `Banned **${bannedUser.tag}** (${user}) with reason **${reason}**!`);
           }) .catch(err => {});
-        } else msg.guild.members.ban(user, {reason: `Banned by ${msg.author.tag}`}) .then(() => {
-          successMessage(msg.channel, `Banned **<@${user}>** (${user}) with reason **Banned by ${msg.author.tag}**!`);
+        } else msg.guild.members.ban(user, {reason: `Banned by ${msg.author.tag}`}) .then((bannedUser) => {
+          successMessage(msg.channel, `Banned **${bannedUser.tag}** (${user}) with reason **Banned by ${msg.author.tag}**!`);
         }) .catch(err => {});
       } else {
         errorMessage(msg.channel, 'Invalid user provided!');
@@ -285,19 +285,19 @@ client.on('message', (msg) => {
           } else isBanned=true
         });
         if(reason) {
-          msg.guild.members.unban(userId, reason) .then(() => {
-            successMessage(msg.channel, `Unbanned **<@${userId}>** (${userId}) with reason **${reason}**!`);
+          msg.guild.members.unban(userId, reason) .then((unbannedUser) => {
+            successMessage(msg.channel, `Unbanned **${unbannedUser.tag}** (${userId}) with reason **${reason}**!`);
           }) .catch(err => { if(err.message === 'Unknown Ban') { errorMessage(msg.channel, 'User is not banned!') }});
-        } else msg.guild.members.unban(userId, `Unbanned by ${msg.author.tag}`) .then(() => {
-          successMessage(msg.channel, `Unbanned **<@${userId}>** (${userId}) with reason **Unbanned by ${msg.author.tag}**!`);
+        } else msg.guild.members.unban(userId, `Unbanned by ${msg.author.tag}`) .then((unbannedUser) => {
+          successMessage(msg.channel, `Unbanned **${unbannedUser.tag}** (${userId}) with reason **Unbanned by ${msg.author.tag}**!`);
         }) .catch(err => { if(err.message === 'Unknown Ban') { errorMessage(msg.channel, 'User is not banned!') }});
       } else if(/^[0-9]*$/.test(user)) {
         if(reason) {
-          msg.guild.members.unban(user, reason) .then(() => {
-            successMessage(msg.channel, `Unbanned **<@${user}>** (${user}) with reason **${reason}**!`);
+          msg.guild.members.unban(user, reason) .then((unbannedUser) => {
+            successMessage(msg.channel, `Unbanned **${unbannedUser.tag}** (${user}) with reason **${reason}**!`);
           }) .catch(err => { if(err.message === 'Unknown Ban') { errorMessage(msg.channel, 'User is not banned!') }});
-        } else msg.guild.members.unban(user, `Unbanned by ${msg.author.tag}`) .then(() => {
-          successMessage(msg.channel, `Unbanned **<@${user}>** (${user}) with reason **Unbanned by ${msg.author.tag}**!`);
+        } else msg.guild.members.unban(user, `Unbanned by ${msg.author.tag}`) .then((unbannedUser) => {
+          successMessage(msg.channel, `Unbanned **${unbannedUser.tag}** (${user}) with reason **Unbanned by ${msg.author.tag}**!`);
         }) .catch(err => { if(err.message === 'Unknown Ban') { errorMessage(msg.channel, 'User is not banned!') }});
       } else {
         errorMessage(msg.channel, 'Invalid user provided!');
@@ -325,7 +325,7 @@ client.on('message', (msg) => {
       }
       msg.guild.members.fetch(userID) .then(user => {
         user.kick(reason ? reason : `Kicked by ${msg.author.tag}`) .then(() => {
-          successMessage(msg.channel, `Kicked **<@${userID}>** (${userID}) with reason **${reason ? reason : `Kicked by ${msg.author.tag}`}**!`);
+          successMessage(msg.channel, `Kicked **${user.user.tag}** (${userID}) with reason **${reason ? reason : `Kicked by ${msg.author.tag}`}**!`);
         }) .catch(err => {});
       }) .catch(() => errorMessage(msg.channel, 'Invalid user provided!'));
     }
@@ -348,6 +348,7 @@ client.on('message', (msg) => {
         errorMessage(msg.channel, 'This user has no warnings!');
       } else {
         let warns = guildsettings.warnings.find(e => e.user === userID).warns;
+        if(warns.length < 1) return errorMessage(msg.channel, 'This user has no warnings!');
         let warnList = [];
         for(var i = 0; i < warns.length; i++) {
           if(i != warns.length-1) {
@@ -360,8 +361,9 @@ client.on('message', (msg) => {
             value: '*.*'
           }
         }
+        let userTag = client.users.resolve(userID).tag;
         msg.channel.send({ embed: {
-          title: `${userID}'s Warnings`,
+          title: `${userTag}'s Warnings`,
           thumbnail: {
             url: client.user.avatarURL()
           },
@@ -438,7 +440,7 @@ client.on('message', (msg) => {
         let warnID = args[2]-1;
         warnUser.warns.splice(warnID, 1);
         fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
-        successMessage(msg.channel, `Removed warning with ID **${warnID+1}** from **<@${userID}>** (${userID})!`);
+        successMessage(msg.channel, `Removed warning with ID **${warnID+1}** from **${client.users.resolve(userID).tag}** (${userID})!`);
       } else return errorMessage(msg.channel, 'Invalid warning ID!');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'autokick')) {
