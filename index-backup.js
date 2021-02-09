@@ -20,14 +20,9 @@ const events = require('events');
 const developerEmitter = new events.EventEmitter();
 
 function validateURl(url) {
-  if(typeof url !== 'string') return;
-  if(url.startsWith('http' || 'https')) {
-    try { new URL(url); return true }
-    catch (err) { return false }
-  } else {
-    try { new URL(`http://${url}`); return true }
-    catch (err) { return false }
-  }
+  let validUrlRegex = new RegExp(/(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#()?&//=]*)/g);
+  if(validUrlRegex.test(url)) return true;
+  else return false;
 }
 
 client.on('ready', () => {
@@ -537,12 +532,12 @@ client.on('message', (msg) => {
       if(args[1].toLowerCase().startsWith('none')) {
         let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       guildsettings.store = null;
-      fs.writeFileSync(`${msg.guild.id}.json`, fs.writeFileSync(guildsettings, null, 2));
+      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
       }
       if(!validateURl(args[1])) return errorMessage(msg.channel, 'Invalid URL!');
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       guildsettings.store = args[1].startsWith('http' || 'https') ? args[1] : `http://${args[1]}`;
-      fs.writeFileSync(`${msg.guild.id}.json`, fs.writeFileSync(guildsettings, null, 2));
+      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
       successMessage(msg.channel, 'Server store updated!');
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'rainbowrole')) {
