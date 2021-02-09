@@ -237,6 +237,7 @@ client.on('message', (msg) => {
       if(/^<@/.test(user)) {
         let userId = user.substring(2, user.length-1);
         if (userId.startsWith('!')) userId = userId.substring(1);
+        if(client.users.resolve(userId).bot) return errorMessage(msg.channel, 'User is a bot!');
         if(reason) {
           msg.guild.members.ban(userId, {reason: reason}) .then((bannedUser) => {
             successMessage(msg.channel, `Banned **${bannedUser.tag}** (${userId}) with reason **${reason}**!`);
@@ -317,6 +318,7 @@ client.on('message', (msg) => {
       }
       let userID = args[1].replace('<@!', '').replace('<@').replace('>', '');
       if(!/^[0-9]*$/.test(userID)) return errorMessage(msg.channel, 'Invalid user provided!');
+      if(client.users.resolve(userID).bot) return successMessage(msg.channel, 'User is a bot!');
       let newArgs = args;
       let reason;
       if(args.length > 2) {
@@ -399,6 +401,7 @@ client.on('message', (msg) => {
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       let warnings = guildsettings.warnings;
       let warnUser = warnings.find(e => e.user === userID);
+      if(client.users.resolve(userID).bot) return errorMessage(msg.channel, 'User is a bot!');
       if(!warnUser) {
         warnings[warnings.length] = {
           "user": userID,
@@ -462,6 +465,7 @@ client.on('message', (msg) => {
         autokick = 0;
       } else autokick = parseInt(args[1]);
       if(autokick < 0) autokick = 0;
+      if(autokick > 500) autokick = 500;
       guildsettings.autokick = autokick;
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
       successMessage(msg.channel, `Set warnings until kick to **${autokick}**!`);
@@ -485,6 +489,7 @@ client.on('message', (msg) => {
         autoban = 0;
       } else autoban = parseInt(args[1]);
       if(autoban < 0) autoban = 0;
+      if(autoban > 500) autoban = 500;
       guildsettings.autoban = autoban;
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
       successMessage(msg.channel, `Set warnings until ban to **${autoban}**!`);
