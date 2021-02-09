@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -18,6 +18,12 @@ const premiumAPI = require('./premiumAPI');
 const musicBotAPI = require('./musicBotAPI');
 const events = require('events');
 const developerEmitter = new events.EventEmitter();
+
+function validateURl(url) {
+  let validUrlRegex = new RegExp(/(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#()?&//=]*)/g);
+  if(validUrlRegex.test(url)) return true;
+  else return false;
+}
 
 client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
@@ -513,8 +519,28 @@ client.on('message', (msg) => {
           return;
         }
       }*/
-      msg.channel.send('Command re-work is under way! Please check back later');
+      //msg.channel.send('Command re-work is under way! Please check back later');
       // TODO: Re-work setstore command
+      if(!msg.member.hasPermission('ADMINISTRATOR')) {
+        if(!botDevelopers.includes(msg.member.id)) {
+          permissionDenied(msg.channel, "ADMINISTRATOR");
+          return;
+        }
+      }
+      let args = msg.content.split(' ');
+      if(args.length < 2) return errorMessage(msg.channel, 'Usage: ' + prefix + 'setstore <URL>');
+      if(args[1].toLowerCase().startsWith('none')) {
+        let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+        guildsettings.store = null;
+        fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
+        successMessage(msg.channel, 'Server store reset!');
+        return;
+      }
+      if(!validateURl(args[1])) return errorMessage(msg.channel, 'Invalid URL!');
+      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+      guildsettings.store = args[1].startsWith('http' || 'https') ? args[1] : `http://${args[1]}`;
+      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
+      successMessage(msg.channel, 'Server store updated!');
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'rainbowrole')) {
       if(!botDevelopers.includes(msg.member.id)) {
