@@ -25,7 +25,7 @@ function checkUpdate(guildID, client) {
     let latestRelease = releases.find(e => e.fileInt === largestFileInt).filename;
     if(guildSettings.lastLoggedUpdate == latestRelease) return;
     let error = false;
-    let channel = client.channels.cache.get(guildSettings.updateChannel) .catch(err => error = true);
+    let channel = client.channels.cache.get(guildSettings.updateChannel);
     if(!channel) error = true;
     channel.send({ embed: {
         title: `**Version ${latestRelease.replace('.txt', '')} Released!**`,
