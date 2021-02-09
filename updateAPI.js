@@ -25,12 +25,13 @@ function checkUpdate(guildID, client) {
     let latestRelease = releases.find(e => e.fileInt === largestFileInt).filename;
     if(guildSettings.lastLoggedUpdate == latestRelease) return;
     let error = false;
-    client.channels.cache.get(guildSettings.updateChannel).send({ embed: {
+    let channel = client.channels.resolve(guildSettings.updateChannel) .catch(err => error = true);
+    if(channel) channel.send({ embed: {
         title: `**Version ${latestRelease.replace('.txt', '')} Released!**`,
         thumbnail: {
             url: client.user.avatarURL()
         },
-        color: `0x${client.guilds.cache.get(guildID).me.displayHexColor.substring(1)}`,
+        color: `0x${channel.guild.me.displayHexColor.substring(1)}`,
         description: `\`\`\`diff\n${fs.readFileSync(__dirname + '/releases/' + latestRelease)}\`\`\``,
         timestamp: new Date()
     }}) .catch(err => {
