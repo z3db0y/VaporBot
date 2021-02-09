@@ -868,8 +868,8 @@ client.on('message', (msg) => {
       }
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'play')) {
-      errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
-      /*var guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+      //errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
+      var guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       let args = msg.content.split(' ');
       let query;
       if(args.length < 2) return msg.channel.send('Usage: ' + prefix + 'play <SearchText>');
@@ -883,7 +883,8 @@ client.on('message', (msg) => {
         });
       }
       musicBotAPI.play(query, guildsettings.activeVC, msg.guild.id);
-      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));*/
+      successMessage(msg.channel, 'Now playing: **' + query + '**');
+      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'stop')) {
       errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
