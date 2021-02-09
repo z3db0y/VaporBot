@@ -948,7 +948,7 @@ developerEmitter.on('devRoleRemoved', (guildID, devRoleID) => {
 
 function permissionDenied(channel, permission) {
   channel.send({embed: {
-    title: "❌ You need **" + permission + "** to perform this action.",
+    title: "You need **" + permission + "** to perform this action.",
     color: "0xFF0000"
   }})
 }
