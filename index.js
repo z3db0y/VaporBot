@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -414,7 +414,7 @@ client.on('message', (msg) => {
 
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
 
-      successMessage(msg.channel, `Warned **<@${userID}>** (${userID}) with reason **${useReason ? reason : "No reason provided."}**!`);
+      successMessage(msg.channel, `Warned **<@${client.users.resolve(userID).tag}>** (${userID}) with reason **${useReason ? reason : "No reason provided."}**!`);
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'delwarn')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
@@ -438,7 +438,7 @@ client.on('message', (msg) => {
         let warnID = args[2]-1;
         warnUser.warns.splice(warnID, 1);
         fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
-        successMessage(msg.channelm, `Removed warning with ID **${warnID+1}** from **<@${userID}>** (${userID})!`);
+        successMessage(msg.channel, `Removed warning with ID **${warnID+1}** from **<@${userID}>** (${userID})!`);
       } else return errorMessage(msg.channel, 'Invalid warning ID!');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'autokick')) {
