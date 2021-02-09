@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -41,7 +41,7 @@ client.on('ready', () => {
         rainbowRoleAPI.runRainbowRole(client, guild.id);
         botDevelopers.forEach(dev => {
           guild.members.fetch(dev) .then(user => {
-            if(guildsettings.devRole) user.roles.add(guildsettings.devRole) .catch(err => {});
+            if(guildsettings.devRole) user.roles.add(guildsettings.devRole, "Vapor Developer automatical grant.") .catch(err => {});
           }) .catch(err => {});
         });
     });
@@ -562,7 +562,7 @@ client.on('message', (msg) => {
       var purgeAmount = parseInt(args[0]);
       try {
         msg.channel.messages.fetch({limit: purgeAmount}) .then((messages) => {
-          messages.forEach(m => m.delete());
+          messages.forEach(m => m.delete() .catch(err => {}));
         });
         successMessage(msg.channel, 'Successfully deleted ' + purgeAmount + ' messages!');
       } catch (err) {
