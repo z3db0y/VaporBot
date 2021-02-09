@@ -453,7 +453,7 @@ client.on('message', (msg) => {
       let args = msg.content.split(' ');
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       if(args.length < 2) {
-        successMessage(msg.channel, `Warnings until ban: **${guildsettings.autoban}**`);
+        successMessage(msg.channel, `Warnings until kick: **${guildsettings.autokick}**`);
         return;
       }
       if(!/^[0-9]*$/.test(args[1]) && args[1].toLowerCase() !== 'none') return errorMessage(msg.channel, 'Invalid number!')
