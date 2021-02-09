@@ -1,5 +1,5 @@
 {
-  "prefix": "v!",
+  "prefix": "abcdefghijklmnopqrstuvwxyz",
   "logging": {
     "enabled": false,
     "logChannelId": null,
