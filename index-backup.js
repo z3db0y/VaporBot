@@ -531,8 +531,10 @@ client.on('message', (msg) => {
       if(args.length < 2) return errorMessage(msg.channel, 'Usage: ' + prefix + 'setstore <URL>');
       if(args[1].toLowerCase().startsWith('none')) {
         let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-      guildsettings.store = null;
-      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
+        guildsettings.store = null;
+        fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
+        successMessage(msg.channel, 'Server store reset!');
+        return;
       }
       if(!validateURl(args[1])) return errorMessage(msg.channel, 'Invalid URL!');
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
