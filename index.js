@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -181,7 +181,7 @@ client.on('message', (msg) => {
                 }
             ],
             timestamp: new Date()
-        } });
+        } }) .catch(err => checkError(err.message));
         msg.channel.send({embed: {
           title: "Still Need Help?",
             color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
@@ -194,7 +194,7 @@ client.on('message', (msg) => {
                 url: client.user.avatarURL()
             },
             timestamp: new Date()
-        }})
+        }}) .catch(err => checkError(err.message));
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'updateconfigs')) {
         if(msg.author.id == "740167253491843094") {
@@ -985,10 +985,14 @@ function errorMessage(channel, message) {
     title: message,
     color: "0xFF0000"
   }}) .catch(err => {
-    if(err.message === 'Missing Permissions') {
-      console.log(`\x1b[31m[Error] \x1b[0mGuild \x1b[31m${channel.guild.name} \x1b[0mChannel \x1b[31m\#${channel.name}\x1b[0m: Missing Permission.`);
-    }
+    checkError(err.message);
   })
+}
+
+function checkError(errMsg) {
+  if(errMsg === 'Missing Permissions') {
+    console.log(`\x1b[31m[Error] \x1b[0mGuild \x1b[31m${channel.guild.name} \x1b[0mChannel \x1b[31m\#${channel.name}\x1b[0m: Missing Permissions.`);
+  }
 }
 
 if (BOT_CHANNEL == 0) {
