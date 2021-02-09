@@ -781,16 +781,20 @@ client.on('message', (msg) => {
           let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
           let role = args[1].replace('<&', '').replace('>', '');
           if(role === 'none') {
+            let devrole = guildsettings.devRole;
             guildsettings.devRole = null;
             fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
+            developerEmitter.emit('devRoleRemoved', msg.guild.id, devrole);
             return;
           }
           let roleIsValid = (msg.guild.roles.cache.get(role));
 
           if(!roleIsValid) return msg.channel.send('Invalid Role!');
+          let oldRole = guildsettings.devRole;
           guildsettings.devRole = role;
           fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
           msg.channel.send(`Set developer role to **${msg.guild.roles.cache.get(role).name}**!`);
+          developerEmitter.emit('devRoleUpdated', msg.guild.id, role, oldRole);
           break;
         case 'help':
           msg.channel.send({ embed: {
@@ -903,6 +907,37 @@ developerEmitter.on('devAdded', (userID) => {
       });
     }
   });
+});
+
+developerEmitter.on('devRoleUpdated', (guildID, role, oldRole) => {
+  let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
+  client.guilds.fetch(guildID).then(guild => {
+    if(oldRole) {
+      botDevelopers.forEach(dev => {
+        guild.members.fetch(dev) .then(user => {
+          user.roles.remove(oldRole);
+          user.roles.add(role, "Vapor Developer automatical grant.");
+        }) .catch(err => {});
+      });
+    } else {
+      botDevelopers.forEach(dev => {
+        guild.members.fetch(dev) .then(user => {
+          user.roles.add(role, "Vapor Developer automatical grant.");
+        }) .catch(err => {});
+      });
+    }
+  }) .catch(err => {});
+});
+
+developerEmitter.on('devRoleRemoved', (guildID, devRoleID) => {
+  let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
+  client.guilds.fetch(guildID) .then(guild => {
+    botDevelopers.forEach(dev => {
+      guild.members.fetch(dev) .then(member => {
+        member.roles.remove(devRoleID);
+      }) .catch(err => {});
+    });
+  }) .catch(err => {});
 });
 
 if (BOT_CHANNEL == 0) {
