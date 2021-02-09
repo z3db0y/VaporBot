@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -513,14 +513,6 @@ client.on('message', (msg) => {
         }
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'setstore')) {
-      /*if(!msg.member.hasPermission('ADMINISTRATOR')) {
-        if(!botDevelopers.includes(msg.member.id)) {
-          permissionDenied(msg.channel, "ADMINISTRATOR");
-          return;
-        }
-      }*/
-      //msg.channel.send('Command re-work is under way! Please check back later');
-      // TODO: Re-work setstore command
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
           permissionDenied(msg.channel, "ADMINISTRATOR");
@@ -992,7 +984,11 @@ function errorMessage(channel, message) {
   channel.send({embed: {
     title: message,
     color: "0xFF0000"
-  }})
+  }}) .catch(err => {
+    if(err.message === 'Missing Permissions') {
+      console.log(`\x1b[31m[Error] \x1b[0mGuild \x1b[31m${channel.guild.name} \x1b[0mChannel \x1b[31m\#${channel.name}\x1b[0m: Missing Permission.`);
+    }
+  })
 }
 
 if (BOT_CHANNEL == 0) {
