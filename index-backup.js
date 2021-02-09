@@ -209,7 +209,7 @@ client.on('message', (msg) => {
             let newPrefix = args.join(' ');
             rawData.prefix = newPrefix;
             fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(rawData, null, 2));
-            msg.channel.send('Prefix set to **' + newPrefix + '**');
+            successMessage(msg.channel, 'Prefix set to **' + newPrefix + '**');
         }
         else {
             permissionDenied(msg.channel, "ADMINISTRATOR");
@@ -224,7 +224,7 @@ client.on('message', (msg) => {
       }
       let args = msg.content.split(' ');
       if(args.length < 2) {
-        msg.channel.send('Usage: ' + prefix + 'ban <UserID>|<@User>');
+        errorMessage(msg.channel, 'Usage: ' + prefix + 'ban <UserID>|<@User>');
         return;
       }
       let user = args[1];
@@ -239,21 +239,21 @@ client.on('message', (msg) => {
         if (userId.startsWith('!')) userId = userId.substring(1);
         if(reason) {
           msg.guild.members.ban(userId, {reason: reason}) .then(() => {
-            msg.channel.send(`Banned **<@${userId}>** (${userId}) with reason **${reason}**!`);
+            successMessage(msg.channel, `Banned **<@${userId}>** (${userId}) with reason **${reason}**!`);
           }) .catch(err => {});
         } else msg.guild.members.ban(userId, {reason: `Banned by ${msg.author.tag}`}) .then(() => {
-          msg.channel.send(`Banned **<@${userId}>** (${userId}) with reason **Banned by ${msg.author.tag}**!`);
+          successMessage(msg.channel, `Banned **<@${userId}>** (${userId}) with reason **Banned by ${msg.author.tag}**!`);
         }) .catch(err => {});
       } else if(/^[0-9]*$/.test(user)) {
         if(reason) {
           msg.guild.members.ban(user, {reason: reason}) .then(() => {
-            msg.channel.send(`Banned **<@${user}>** (${user}) with reason **${reason}**!`);
+            successMessage(msg.channel, `Banned **<@${user}>** (${user}) with reason **${reason}**!`);
           }) .catch(err => {});
         } else msg.guild.members.ban(user, {reason: `Banned by ${msg.author.tag}`}) .then(() => {
-          msg.channel.send(`Banned **<@${user}>** (${user}) with reason **Banned by ${msg.author.tag}**!`);
+          successMessage(msg.channel, `Banned **<@${user}>** (${user}) with reason **Banned by ${msg.author.tag}**!`);
         }) .catch(err => {});
       } else {
-        msg.channel.send('Invalid user provided!');
+        errorMessage(msg.channel, 'Invalid user provided!');
       }
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'unban')) {
@@ -265,7 +265,7 @@ client.on('message', (msg) => {
       }
       let args = msg.content.split(' ');
       if(args.length < 2) {
-        msg.channel.send('Usage: ' + prefix + 'unban <UserID>|<@User>');
+        errorMessage(msg.channel, 'Usage: ' + prefix + 'unban <UserID>|<@User>');
         return;
       }
       let user = args[1];
@@ -286,21 +286,21 @@ client.on('message', (msg) => {
         });
         if(reason) {
           msg.guild.members.unban(userId, reason) .then(() => {
-            msg.channel.send(`Unbanned **<@${userId}>** (${userId}) with reason **${reason}**!`);
-          }) .catch(err => { if(err.message === 'Unknown Ban') { msg.channel.send('User is not banned!') }});
+            successMessage(msg.channel, `Unbanned **<@${userId}>** (${userId}) with reason **${reason}**!`);
+          }) .catch(err => { if(err.message === 'Unknown Ban') { errorMessage(msg.channel, 'User is not banned!') }});
         } else msg.guild.members.unban(userId, `Unbanned by ${msg.author.tag}`) .then(() => {
-          msg.channel.send(`Unbanned **<@${userId}>** (${userId}) with reason **Unbanned by ${msg.author.tag}**!`);
-        }) .catch(err => { if(err.message === 'Unknown Ban') { msg.channel.send('User is not banned!') }});
+          successMessage(msg.channel, `Unbanned **<@${userId}>** (${userId}) with reason **Unbanned by ${msg.author.tag}**!`);
+        }) .catch(err => { if(err.message === 'Unknown Ban') { errorMessage(msg.channel, 'User is not banned!') }});
       } else if(/^[0-9]*$/.test(user)) {
         if(reason) {
           msg.guild.members.unban(user, reason) .then(() => {
-            msg.channel.send(`Unbanned **<@${user}>** (${user}) with reason **${reason}**!`);
-          }) .catch(err => { if(err.message === 'Unknown Ban') { msg.channel.send('User is not banned!') }});
+            successMessage(msg.channel, `Unbanned **<@${user}>** (${user}) with reason **${reason}**!`);
+          }) .catch(err => { if(err.message === 'Unknown Ban') { errorMessage(msg.channel, 'User is not banned!') }});
         } else msg.guild.members.unban(user, `Unbanned by ${msg.author.tag}`) .then(() => {
-          msg.channel.send(`Unbanned **<@${user}>** (${user}) with reason **Unbanned by ${msg.author.tag}**!`);
-        }) .catch(err => { if(err.message === 'Unknown Ban') { msg.channel.send('User is not banned!') }});
+          successMessage(msg.channel, `Unbanned **<@${user}>** (${user}) with reason **Unbanned by ${msg.author.tag}**!`);
+        }) .catch(err => { if(err.message === 'Unknown Ban') { errorMessage(msg.channel, 'User is not banned!') }});
       } else {
-        msg.channel.send('Invalid user provided!');
+        errorMessage(msg.channel, 'Invalid user provided!');
       }
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'kick')) {
@@ -312,27 +312,22 @@ client.on('message', (msg) => {
       }
       let args = msg.content.split(' ');
       if(args.length < 2) {
-        msg.channel.send('Usage: ' + prefix + 'kick <UserID>|<@User>');
+        errorMessage(msg.channel, 'Usage: ' + prefix + 'kick <UserID>|<@User>');
         return;
       }
       let userID = args[1].replace('<@!', '').replace('<@').replace('>', '');
-      if(!/^[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
+      if(!/^[0-9]*$/.test(userID)) return errorMessage(msg.channel, 'Invalid user provided!');
       let newArgs = args;
       let reason;
       if(args.length > 2) {
         newArgs.splice(0, 2);
         reason = newArgs.join(' ');
       }
-      try{
-        msg.guild.members.cache.get(userID).kick(reason ? reason : `Kicked by ${msg.author.tag}`) .then(() => {
-          msg.channel.send(`Kicked **<@${userID}>** (${userID}) with reason **${reason ? reason : `Kicked by ${msg.author.tag}`}**!`);
-        }) .catch(err => {
-          msg.channel.send('Couldn\'t kick user! ' + err.message);
-        });
-      } catch (error) {
-        msg.channel.send('Couldn\'t kick user!');
-      }
-      
+      msg.guild.members.fetch(userID) .then(user => {
+        user.kick(reason ? reason : `Kicked by ${msg.author.tag}`) .then(() => {
+          successMessage(msg.channel, `Kicked **<@${userID}>** (${userID}) with reason **${reason ? reason : `Kicked by ${msg.author.tag}`}**!`);
+        }) .catch(err => {});
+      }) .catch(() => errorMessage(msg.channel, 'Invalid user provided!'));
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'warnings') || msg.content.toLowerCase().startsWith(prefix + 'warns')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
@@ -343,14 +338,14 @@ client.on('message', (msg) => {
       }
       let args = msg.content.split(' ');
       if(args.length < 2) {
-        msg.channel.send('Usage: ' + prefix + 'warnings <UserID>|<@User>');
+        errorMessage(msg.channel, 'Usage: ' + prefix + 'warnings <UserID>|<@User>');
         return;
       }
       let userID = args[1].replace('<@!', '').replace('<@', '').replace('>', '');
       if(!/^[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       if(!guildsettings.warnings.find(e => e.user === userID)) {
-        msg.channel.send('This user has no warnings!');
+        errorMessage(msg.channel, 'This user has no warnings!');
       } else {
         let warns = guildsettings.warnings.find(e => e.user === userID).warns;
         let warnList = [];
@@ -384,13 +379,13 @@ client.on('message', (msg) => {
       }
       let args = msg.content.split(' ');
       if(args.length < 2) {
-        msg.channel.send('Usage: ' + prefix + 'warn <UserID>|<@User>');
+        errorMessage(msg.channel, 'Usage: ' + prefix + 'warn <UserID>|<@User>');
         return;
       }
       let userID = args[1].replace('<@!', '').replace('<@', '').replace('>', '');
-      if(!/^[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
+      if(!/^[0-9]*$/.test(userID)) return errorMessage(msg.channel, 'Invalid user provided!');
       if(!msg.guild.members.fetch().then(e => e.get(userID))) {
-        msg.channel.send('User is not in this guild!');
+        errorMessage(msg.channel, 'User is not in this guild!');
         return;
       }
       let reason;
@@ -419,7 +414,7 @@ client.on('message', (msg) => {
 
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
 
-      msg.channel.send(`Warned **<@${userID}>** (${userID}) with reason **${useReason ? reason : "No reason provided."}**!`);
+      successMessage(msg.channel, `Warned **<@${userID}>** (${userID}) with reason **${useReason ? reason : "No reason provided."}**!`);
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'delwarn')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
@@ -430,21 +425,21 @@ client.on('message', (msg) => {
       }
       let args = msg.content.split(' ');
       if(args.length < 3) {
-        msg.channel.send('Usage: ' + prefix + 'delwarn <UserID>|<@User> <WarningID>');
+        errorMessage(msg.channel, 'Usage: ' + prefix + 'delwarn <UserID>|<@User> <WarningID>');
         return;
       }
       let userID = args[1].replace('<@!', '').replace('<@', '').replace('>', '');
-      if(!/[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
-      if(!/[0-9]*$/.test(args[2])) return msg.channel.send('Invalid warning ID!');
+      if(!/[0-9]*$/.test(userID)) return errorMessage(msg.channel, 'Invalid user provided!');
+      if(!/[0-9]*$/.test(args[2])) return errorMessage(msg.channel, 'Invalid warning ID!');
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-      if(!guildsettings.warnings.find(e => e.user === userID)) return msg.channel.send('This user has no warnings!');
+      if(!guildsettings.warnings.find(e => e.user === userID)) return errorMessage(msg.channel, 'This user has no warnings!');
       let warnUser = guildsettings.warnings.find(e => e.user === userID);
       if(args[2] > 0 && args[2] <= warnUser.warns.length) {
         let warnID = args[2]-1;
         warnUser.warns.splice(warnID, 1);
         fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
-        msg.channel.send(`Removed warning with ID **${warnID+1}** from **<@${userID}>** (${userID})!`);
-      } else return msg.channel.send('Invalid warning ID!');
+        successMessage(msg.channelm, `Removed warning with ID **${warnID+1}** from **<@${userID}>** (${userID})!`);
+      } else return errorMessage(msg.channel, 'Invalid warning ID!');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'autokick')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
@@ -455,10 +450,10 @@ client.on('message', (msg) => {
       }
       let args = msg.content.split(' ');
       if(args.length < 2) {
-        msg.channel.send('Usage: ' + prefix + 'autokick <Number>');
+        errorMessage(msg.channel, 'Usage: ' + prefix + 'autokick <Number>');
         return;
       }
-      if(!/^[0-9]*$/.test(args[1]) && args[1].toLowerCase() !== 'none') return msg.channel.send('Invalid number!')
+      if(!/^[0-9]*$/.test(args[1]) && args[1].toLowerCase() !== 'none') return errorMessage(msg.channel, 'Invalid number!')
       let autokick;
       if(args[1].toLowerCase() === 'none') {
         autokick = 0;
@@ -467,7 +462,7 @@ client.on('message', (msg) => {
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       guildsettings.autokick = autokick;
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
-      msg.channel.send(`Set warnings until kick to **${autokick}**!`);
+      successMessage(msg.channel, `Set warnings until kick to **${autokick}**!`);
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'autoban')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
@@ -478,10 +473,10 @@ client.on('message', (msg) => {
       }
       let args = msg.content.split(' ');
       if(args.length < 2) {
-        msg.channel.send('Usage: ' + prefix + 'autoban <Number>');
+        errorMessage(msg.channel, 'Usage: ' + prefix + 'autoban <Number>');
         return;
       }
-      if(!/^[0-9]*$/.test(args[1]) && args[1].toLowerCase() !== 'none') return msg.channel.send('Invalid number!')
+      if(!/^[0-9]*$/.test(args[1]) && args[1].toLowerCase() !== 'none') return errorMessage(msg.channel, 'Invalid number!')
       let autoban;
       if(args[1].toLowerCase() === 'none') {
         autoban = 0;
@@ -490,11 +485,11 @@ client.on('message', (msg) => {
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       guildsettings.autoban = autoban;
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
-      msg.channel.send(`Set warnings until kick to **${autoban}**!`);
+      successMessage(msg.channel, `Set warnings until kick to **${autoban}**!`);
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'store')) {
         if(JSON.parse(fs.readFileSync(filename)).store == null) {
-            msg.channel.send('This server has no store');
+            errorMessage(msg.channel, 'This server has no store');
         }
         else {
             msg.channel.send({ embed: {
@@ -520,7 +515,7 @@ client.on('message', (msg) => {
         return;
       }
       if(msg.content.length < prefix.length+33) {
-        msg.channel.send('Invalid usage! Use: ' + prefix + 'rainbowrole <ROLE>');
+        errorMessage(msg.channel, 'Invalid usage! Use: ' + prefix + 'rainbowrole <ROLE>');
         return;
       }
       let guildData = JSON.parse(fs.readFileSync(filename));
@@ -530,19 +525,19 @@ client.on('message', (msg) => {
               if(guildData.rainbowRoles[i] === msg.content.substring(prefix.length+15, prefix.length+33)) {
                   guildData.rainbowRoles.splice(i, 1);
                   fs.writeFileSync(filename, JSON.stringify(guildData, null, 2));
-                  msg.channel.send('Rainbow role disabled!');
+                  successMessage(msg.channel, 'Rainbow role disabled!');
                   return;
               }
           }
           guildData.rainbowRoles.push(msg.content.substring(prefix.length+15, prefix.length+33));
-          msg.channel.send('Enabled rainbow role for ' + msg.content.substring(prefix.length+12, prefix.length+33) + '>!');
+          successMessage(msg.channel, 'Enabled rainbow role for ' + msg.content.substring(prefix.length+12, prefix.length+33) + '>!');
           fs.writeFileSync(filename, JSON.stringify(guildData, null, 2));
       })
       .catch((err) => {
           if(err.message === "Missing Permissions") {
-            msg.channel.send('Sorry, I don\'t have permission to do that!');
+            errorMessage(msg.channel, 'Sorry, I don\'t have permission to do that!');
           } else {
-            msg.channel.send('An error has occurred! Please try again later.');
+            errorMessage(msg.channel, 'An error has occurred! Please try again later.');
           }
       });
     }
@@ -554,12 +549,12 @@ client.on('message', (msg) => {
         }
       }
       if(msg.content.length < prefix.length+7) {
-        msg.channel.send('Usage: ' + prefix + 'purge <number>');
+        errorMessage(msg.channel, 'Usage: ' + prefix + 'purge <number>');
         return;
       }
       let args = msg.content.substring(prefix.length+6).split(' ');
       if(!/^[0-9]*$/.test(args[0])) {
-        msg.channel.send('Amount must be a number!');
+        errorMessage(msg.channel, 'Amount must be a number!');
         return;
       }
       var purgeAmount = parseInt(args[0]);
@@ -567,9 +562,9 @@ client.on('message', (msg) => {
         msg.channel.messages.fetch({limit: purgeAmount}) .then((messages) => {
           messages.forEach(m => m.delete());
         });
-        msg.channel.send('Successfully deleted ' + purgeAmount + ' messages!');
+        successMessage(msg.channel, 'Successfully deleted ' + purgeAmount + ' messages!');
       } catch (err) {
-        msg.channel.send('An error has occurred! Please try again.');
+        errorMessage(msg.channel, 'An error has occurred! Please try again.');
       };
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'info')) {
@@ -670,7 +665,7 @@ client.on('message', (msg) => {
       }) .catch(() => {
         msg.channel.send('Operation timed out.');
       });*/
-      msg.channel.send('This concept is too in-production to even have a developer version. Please check back later.');
+      errorMessage(msg.channel, 'This concept is too in-production to even have a developer version. Please check back later.');
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'dev')) {
       if(!botDevelopers.includes(msg.member.id)) {
@@ -848,7 +843,7 @@ client.on('message', (msg) => {
       }
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'play')) {
-      msg.channel.send('Command is still in early development! Please check back later.');
+      errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
       /*var guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       let args = msg.content.split(' ');
       let query;
@@ -866,28 +861,28 @@ client.on('message', (msg) => {
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));*/
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'stop')) {
-      msg.channel.send('Command is still in early development! Please check back later.');
+      errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'pause')) {
-      msg.channel.send('Command is still in early development! Please check back later.');
+      errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'skip')) {
-      msg.channel.send('Command is still in early development! Please check back later.');
+      errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'queue')) {
-      msg.channel.send('Command is still in early development! Please check back later.');
+      errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'add')) {
-      msg.channel.send('Command is still in early development! Please check back later.');
+      errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'remove')) {
-      msg.channel.send('Command is still in early development! Please check back later.');
+      errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'disconnect') || msg.content.toLowerCase().startsWith(prefix + 'dc')) {
-      msg.channel.send('Command is still in early development! Please check back later.');
+      errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'join')) {
-      msg.channel.send('Command is still in early development! Please check back later.');
+      errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
     }
 });
 
@@ -949,6 +944,20 @@ developerEmitter.on('devRoleRemoved', (guildID, devRoleID) => {
 function permissionDenied(channel, permission) {
   channel.send({embed: {
     title: "You need **" + permission + "** to perform this action.",
+    color: "0xFF0000"
+  }})
+}
+
+function successMessage(channel, message) {
+  channel.send({embed: {
+    title: message,
+    color: "0x00FF00"
+  }})
+}
+
+function errorMessage(channel, message) {
+  channel.send({embed: {
+    title: message,
     color: "0xFF0000"
   }})
 }
