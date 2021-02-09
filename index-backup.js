@@ -879,10 +879,7 @@ client.on('message', (msg) => {
       if(!guildsettings.activeVC) {
         if(!msg.member.voice.channel) return msg.channel.send('You are not in a voice channel!');
         msg.member.voice.channel.join() .then(c => {
-          guildsettings.activeVC = c;
           musicBotAPI.play(query, c, msg.guild.id);
-      successMessage(msg.channel, 'Now playing: **' + query + '**');
-      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
         });
       }
     }
