@@ -212,13 +212,13 @@ client.on('message', (msg) => {
             msg.channel.send('Prefix set to **' + newPrefix + '**');
         }
         else {
-            msg.channel.send('You need administrator to use this command!');
+            permissionDenied(msg.channel, "ADMINISTRATOR");
         }
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'ban')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
-          msg.channel.send('You have to be an administator to do this!');
+          permissionDenied(msg.channel, "ADMINISTRATOR");
           return;
         }
       }
@@ -259,7 +259,7 @@ client.on('message', (msg) => {
     else if(msg.content.toLowerCase().startsWith(prefix + 'unban')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
-          msg.channel.send('You have to be an administator to do this!');
+          permissionDenied(msg.channel, "ADMINISTRATOR");
           return;
         }
       }
@@ -306,7 +306,7 @@ client.on('message', (msg) => {
     else if(msg.content.toLowerCase().startsWith(prefix + 'kick')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
-          msg.channel.send('You have to be an administator to do this!');
+          permissionDenied(msg.channel, "ADMINISTRATOR");
           return;
         }
       }
@@ -337,7 +337,7 @@ client.on('message', (msg) => {
     else if(msg.content.toLowerCase().startsWith(prefix + 'warnings') || msg.content.toLowerCase().startsWith(prefix + 'warns')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
-          msg.channel.send('You have to be an administator to do this!');
+          permissionDenied(msg.channel, "ADMINISTRATOR");
           return;
         }
       }
@@ -378,7 +378,7 @@ client.on('message', (msg) => {
     else if(msg.content.toLowerCase().startsWith(prefix + 'warn')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
-          msg.channel.send('You have to be an administator to do this!');
+          permissionDenied(msg.channel, "ADMINISTRATOR");
           return;
         }
       }
@@ -422,10 +422,9 @@ client.on('message', (msg) => {
       msg.channel.send(`Warned **<@${userID}>** (${userID}) with reason **${useReason ? reason : "No reason provided."}**!`);
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'delwarn')) {
-      // msg.channel.send('Command is undergoing development. Please check back later.');
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
-          msg.channel.send('You have to be an administator to do this!');
+          permissionDenied(msg.channel, "ADMINISTRATOR");
           return;
         }
       }
@@ -450,7 +449,7 @@ client.on('message', (msg) => {
     else if(msg.content.toLowerCase().startsWith(prefix + 'autokick')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
-          msg.channel.send('You have to be an administator to do this!');
+          permissionDenied(msg.channel, "ADMINISTRATOR");
           return;
         }
       }
@@ -473,7 +472,7 @@ client.on('message', (msg) => {
     else if(msg.content.toLowerCase().startsWith(prefix + 'autoban')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
-          msg.channel.send('You have to be an administator to do this!');
+          permissionDenied(msg.channel, "ADMINISTRATOR");
           return;
         }
       }
@@ -508,7 +507,7 @@ client.on('message', (msg) => {
     else if (msg.content.toLowerCase().startsWith(prefix + 'setstore')) {
       /*if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
-          msg.channel.send('You have to be an administator to do this!');
+          permissionDenied(msg.channel, "ADMINISTRATOR");
           return;
         }
       }*/
@@ -517,7 +516,7 @@ client.on('message', (msg) => {
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'rainbowrole')) {
       if(!botDevelopers.includes(msg.member.id)) {
-        msg.channel.send('Sorry, but you need to be a bot developer to use this feature!');
+        permissionDenied(msg.channel, "BOT_DEVELOPER");
         return;
       }
       if(msg.content.length < prefix.length+33) {
@@ -550,7 +549,7 @@ client.on('message', (msg) => {
     else if(msg.content.toLowerCase().startsWith(prefix + 'purge')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
-          msg.channel.send('You have to be an administator to do this!');
+          permissionDenied(msg.channel, "ADMINISTRATOR");
           return;
         }
       }
@@ -661,7 +660,7 @@ client.on('message', (msg) => {
     else if (msg.content.toLowerCase().startsWith(prefix + 'passwordprotect')) {
       /*if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
-          msg.channel.send('You have to be an administator to do this!');
+          permissionDenied(msg.channel, "ADMINISTRATOR");
           return;
         }
       }
@@ -946,6 +945,13 @@ developerEmitter.on('devRoleRemoved', (guildID, devRoleID) => {
     });
   }) .catch(err => {});
 });
+
+function permissionDenied(channel, permission) {
+  channel.send({embed: {
+    title: "❌ You need **" + permission + "** to perform this action.",
+    color: "0xFF0000"
+  }})
+}
 
 if (BOT_CHANNEL == 0) {
     client.login(JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).betaToken);
