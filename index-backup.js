@@ -34,9 +34,16 @@ client.on('ready', () => {
       });
     }
     updateAPI.init(client);
+    let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
     client.guilds.cache.forEach((guild) => {
+        let guildsettings = JSON.parse(fs.readFileSync(`${guild.id}.json`));
         guildAPI.initialiseGuild(guild);
         rainbowRoleAPI.runRainbowRole(client, guild.id);
+        botDevelopers.forEach(dev => {
+          guild.members.fetch(dev) .then(user => {
+            if(guildsettings.devRole) user.roles.add(guildsettings.devRole) .catch(err => {});
+          }) .catch(err => {});
+        });
     });
 });
 
