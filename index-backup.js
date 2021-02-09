@@ -416,7 +416,7 @@ client.on('message', (msg) => {
 
       fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
 
-      successMessage(msg.channel, `Warned **<@${client.users.resolve(userID).tag}>** (${userID}) with reason **${useReason ? reason : "No reason provided."}**!`);
+      successMessage(msg.channel, `Warned **${client.users.resolve(userID).tag}** (${userID}) with reason **${useReason ? reason : "No reason provided."}**!`);
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'delwarn')) {
       if(!msg.member.hasPermission('ADMINISTRATOR')) {
