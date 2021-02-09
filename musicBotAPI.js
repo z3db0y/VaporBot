@@ -6,7 +6,7 @@ const searchYT = require('yt-search');
 let searchYouTube = async (query) => {
     const results = await searchYT(query);
 
-    return (results.videos.length > 1) ? results.videos[0].url : null;
+    return (results.videos.length > 1) ? results.videos[0] : null;
 }
 
 let getQueue = function (guildID) {
@@ -26,8 +26,11 @@ var MusicBot = {
     
 
     play (query, connection, guildID) {
-        this.add(searchYouTube(query), guildID);
-        connection.play(ytdl(this.queue(guildID)[0], {format: 'mp3'})) .on('finish', onSongFinish(connection, guildID));
+        searchYouTube(query).then(results => {
+            console.dir(results);
+            this.add(results.url, guildID);
+        });
+        connection.play(ytdl(this.queue(guildID)[0], {filter: 'audioonly'})) .on('finish', onSongFinish(connection, guildID));
     },
 
     pause (connection) {
