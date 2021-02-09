@@ -17,6 +17,7 @@ let getQueue = function (guildID) {
 
 let onSongFinish = function (connection, guildID) {
     let serverQueue = getQueue(guildID);
+    serverQueue.shift();
     if(serverQueue.length > 0) connection.play(ytdl(serverQueue[0])) .on('finish', onSongFinish(connection, guildID));
 }
  
@@ -30,7 +31,7 @@ var MusicBot = {
             console.dir(results);
             this.add(results.url, guildID);
         });
-        connection.play(ytdl(this.queue(guildID)[0], {filter: 'audioonly'})) .on('finish', onSongFinish(connection, guildID));
+        if(!connection.dispatcher) connection.play(ytdl(this.queue(guildID)[0], {filter: 'audioonly'})) .on('finish', onSongFinish(connection, guildID));
     },
 
     pause (connection) {
