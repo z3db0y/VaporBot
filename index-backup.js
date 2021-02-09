@@ -19,6 +19,17 @@ const musicBotAPI = require('./musicBotAPI');
 const events = require('events');
 const developerEmitter = new events.EventEmitter();
 
+function validateURl(url) {
+  if(typeof url !== 'string') return;
+  if(url.startsWith('http' || 'https')) {
+    try { new URL(url); return true }
+    catch (err) { return false }
+  } else {
+    try { new URL(`http://${url}`); return true }
+    catch (err) { return false }
+  }
+}
+
 client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
     if(BOT_CHANNEL == 0) {
@@ -513,8 +524,26 @@ client.on('message', (msg) => {
           return;
         }
       }*/
-      msg.channel.send('Command re-work is under way! Please check back later');
+      //msg.channel.send('Command re-work is under way! Please check back later');
       // TODO: Re-work setstore command
+      if(!msg.member.hasPermission('ADMINISTRATOR')) {
+        if(!botDevelopers.includes(msg.member.id)) {
+          permissionDenied(msg.channel, "ADMINISTRATOR");
+          return;
+        }
+      }
+      let args = msg.content.split(' ');
+      if(args.length < 2) return errorMessage(msg.channel, 'Usage: ' + prefix + 'setstore <URL>');
+      if(args[1].toLowerCase().startsWith('none')) {
+        let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+      guildsettings.store = null;
+      fs.writeFileSync(`${msg.guild.id}.json`, fs.writeFileSync(guildsettings, null, 2));
+      }
+      if(!validateURl(args[1])) return errorMessage(msg.channel, 'Invalid URL!');
+      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+      guildsettings.store = args[1].startsWith('http' || 'https') ? args[1] : `http://${args[1]}`;
+      fs.writeFileSync(`${msg.guild.id}.json`, fs.writeFileSync(guildsettings, null, 2));
+      successMessage(msg.channel, 'Server store updated!');
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'rainbowrole')) {
       if(!botDevelopers.includes(msg.member.id)) {
