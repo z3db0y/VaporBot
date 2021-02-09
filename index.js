@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -933,6 +933,7 @@ developerEmitter.on('devRoleRemoved', (guildID, devRoleID) => {
   let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
   client.guilds.fetch(guildID) .then(guild => {
     botDevelopers.forEach(dev => {
+      console.log(dev);
       guild.members.fetch(dev) .then(member => {
         member.roles.remove(devRoleID);
       }) .catch(err => {});
