@@ -933,6 +933,7 @@ developerEmitter.on('devRoleRemoved', (guildID, devRoleID) => {
   let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
   client.guilds.fetch(guildID) .then(guild => {
     botDevelopers.forEach(dev => {
+      console.log(dev);
       guild.members.fetch(dev) .then(member => {
         member.roles.remove(devRoleID);
       }) .catch(err => {});
