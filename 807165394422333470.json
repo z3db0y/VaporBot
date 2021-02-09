@@ -12,9 +12,5 @@
   "warnings": [],
   "autokick": 0,
   "autoban": 0,
-  "musicQueue": [
-    {},
-    {},
-    "https://youtube.com/watch?v=4THFRpw68oQ"
-  ]
+  "musicQueue": []
 }
