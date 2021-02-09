@@ -20,6 +20,12 @@
     {
       "user": "714098185164947488",
       "warns": []
+    },
+    {
+      "user": "759378622900469761",
+      "warns": [
+        "No reason provided."
+      ]
     }
   ],
   "autokick": 5,
