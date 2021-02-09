@@ -9,7 +9,14 @@
   "rainbowRoles": [],
   "lastLoggedUpdate": null,
   "updateChannel": null,
-  "warnings": [],
+  "warnings": [
+    {
+      "user": "654036914126585896",
+      "warns": [
+        "pog"
+      ]
+    }
+  ],
   "autokick": 0,
   "autoban": 0,
   "musicQueue": []
