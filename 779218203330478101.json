@@ -12,7 +12,9 @@
   "warnings": [
     {
       "user": "654036914126585896",
-      "warns": []
+      "warns": [
+        "e"
+      ]
     }
   ],
   "autokick": 0,
