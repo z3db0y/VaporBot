@@ -3,7 +3,7 @@
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -948,7 +948,7 @@ developerEmitter.on('devRoleRemoved', (guildID, devRoleID) => {
 
 function permissionDenied(channel, permission) {
   channel.send({embed: {
-    title: "❌ You need **" + permission + "** to perform this action.",
+    title: "You need **" + permission + "** to perform this action.",
     color: "0xFF0000"
   }})
 }
