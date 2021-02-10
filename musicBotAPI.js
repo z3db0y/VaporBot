@@ -30,7 +30,7 @@ function successMessage(ch, msg) {
 
 function recursivePlay(con, guildID) {
     con.play(getQueue(guildID)[0]) .on('finish', () => {
-        let guildsettings = JSON.parse(fs.readFileSync(guildID));
+        let guildsettings = JSON.parse(fs.readFileSync(`${guildID}.json`));
         guildsettings.musicQueue.shift();
         fs.writeFileSync(`${guildID}.json`, JSON.stringify(guildsettings, null, 2));
         recursivePlay(con, guildID);
@@ -46,7 +46,7 @@ var MusicBot = {
     },
 
     add: function (guildID, url) {
-        let guildsettings = JSON.parse(fs.readFileSync(guildID));
+        let guildsettings = JSON.parse(fs.readFileSync(`${guildID}.json`));
         guildsettings.musicQueue.push(url);
         fs.writeFileSync(`${guildID}.json`, JSON.stringify(guildsettings, null, 2));
     }
