@@ -12,8 +12,6 @@
   "warnings": [],
   "autokick": 0,
   "autoban": 0,
-  "musicQueue": [
-    "https://youtube.com/watch?v=72agGC5b_Yo"
-  ],
+  "musicQueue": [],
   "devRole": "807166367249596426"
 }
