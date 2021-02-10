@@ -40,7 +40,7 @@ function recursivePlay(con, guildID) {
 var MusicBot = {
     play: function (query, con, guildID) {
         searchYouTube(query) .then(result => {
-            this.add(result.url);
+            this.add(guildID, result.url);
         });
         if(getQueue(guildID).length > 0 && !con.dispatcher) recursivePlay(con, guildID);
     },
