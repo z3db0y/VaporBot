@@ -9,7 +9,7 @@ let searchYouTube = async (query) => {
     return (results.videos.length > 1) ? results.videos[0] : null;
 }
 
-let getQueue = function (guildID) {
+/*let getQueue = function (guildID) {
     let guildsettings = JSON.parse(fs.readFileSync(`${guildID}.json`));
     if(guildsettings.musicQueue) return guildsettings.musicQueue;
     else return null;
@@ -35,20 +35,13 @@ function recursivePlay(con, guildID) {
         fs.writeFileSync(`${guildID}.json`, JSON.stringify(guildsettings, null, 2));
         recursivePlay(con, guildID);
     });
-}
+}*/
 
 var MusicBot = {
     play: function (query, con, guildID) {
         searchYouTube(query) .then(result => {
-            this.add(guildID, result.url);
+            con.play(ytdl(result.url));
         });
-        if(getQueue(guildID).length > 0 && !con.dispatcher) recursivePlay(con, guildID);
-    },
-
-    add: function (guildID, url) {
-        let guildsettings = JSON.parse(fs.readFileSync(`${guildID}.json`));
-        guildsettings.musicQueue.push(url);
-        fs.writeFileSync(`${guildID}.json`, JSON.stringify(guildsettings, null, 2));
     }
 }
 
