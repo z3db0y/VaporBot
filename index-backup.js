@@ -382,7 +382,21 @@ client.on('message', (msg) => {
       }
       let userID = args[1].replace('<@!', '').replace('<@', '').replace('>', '');
       if(!/^[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
-      +1}. ${warns[i]}`,
+      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+      if(!guildsettings.warnings.find(e => e.user === userID)) {
+        errorMessage(msg.channel, 'This user has no warnings!');
+      } else {
+        let warns = guildsettings.warnings.find(e => e.user === userID).warns;
+        if(warns.length < 1) return errorMessage(msg.channel, 'This user has no warnings!');
+        let warnList = [];
+        for(var i = 0; i < warns.length; i++) {
+          if(i != warns.length-1) {
+            warnList[warnList.length] = {
+              name: `${i+1}. ${warns[i]}\n`,
+              value: '*.*'
+            }
+          } else warnList[warnList.length] = {
+            name: `${i+1}. ${warns[i]}`,
             value: '*.*'
           }
         }
@@ -893,11 +907,14 @@ client.on('message', (msg) => {
       let newArgs = args;
       newArgs.splice(0, 1);
       query = newArgs.join(' ');
-      if(!guildsettings.activeVC) {
+      if(!msg.guild.me.voice.connection) {
         if(!msg.member.voice.channel) return msg.channel.send('You are not in a voice channel!');
-        msg.member.voice.channel.join() .then(c => {});
+        msg.member.voice.channel.join() .then(c => {
+          c.setSpeaking('NONE');
+        });
       }
-      musicBotAPI.play(query, msg.guild.me.voice.connection, msg.guild.id);
+      musicBotAPI.play(c, query);
+      //if(msg.guild.me.voice.connection) musicBotAPI.play(query, msg.guild.me.voice.connection);
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'stop')) {
       errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
