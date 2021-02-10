@@ -83,8 +83,7 @@ class MusicBot {
     let guildsettings = getGuildSettings(guildID);
     if(guildsettings.musicQueue) {
       if(guildsettings.musicQueue.length > 0) c.play(ytdl(guildsettings.musicQueue[0], {filter: 'audioonly'})) .on('finish', () => {
-        guildsettings.musicQueue.shift();
-        setGuildSettings(guildsettings);
+        this.remove(c, 0);
         this.recursivePlay(c);
       });
     }
@@ -960,10 +959,22 @@ client.on('message', (msg) => {
       musicBotAPI.play(msg.guild.me.voice.connection, query);
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'stop')) {
-      errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
+      //errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
+      if(msg.guild.me.voice.channel) if(msg.member.voice.channel.id == msg.guild.me.voice.channel.id) {
+        if(msg.guild.me.voice.connection.dispatcher) musicBotAPI.stop(msg.guild.me.voice.connection);
+        else errorMessage(msg.channel, 'Nothing to stop!');
+      } else errorMessage(msg.channel, 'You are not in the bot\'s voice channel!');
+      else errorMessage(msg.channel, 'You are not in the bot\'s voice channel!');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'pause')) {
-      errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
+      //errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
+      if(msg.guild.me.voice.channel) if(msg.member.voice.channel.id == msg.guild.me.voice.channel.id) {
+        if(msg.guild.me.voice.connection.dispatcher) musicBotAPI.pause(msg.guild.me.voice.connection);
+        else errorMessage(msg.channel, 'Nothing to pause!');
+        if(msg.guild.me.voice.connection.dispatcher.paused) successMessage(msg.channel, 'Paused playback.');
+        else successMessage(msg.channel, 'Resumed playback.');
+      } else errorMessage(msg.channel, 'You are not in the bot\'s voice channel!');
+      else errorMessage(msg.channel, 'You are not in the bot\'s voice channel!');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'skip')) {
       errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
