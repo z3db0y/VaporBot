@@ -22,28 +22,72 @@ const ytdl = require('ytdl-core');
 const ytsearch = require('yt-search');
 const { doesNotMatch } = require('assert');
 
+function getGuildSettings(guildID) {
+  return JSON.parse(fs.readFileSync(`${guildID}.json`));
+}
+
+function setGuildSettings(guildID, settings) {
+  return fs.writeFileSync(`${guildID}.json`, JSON.stringify(settings, null, 2));
+}
+
 class MusicBot {
   play(c, query) {
     this.searchYoutube(query).then(res => {
-      let stream = ytdl(res.url, {filter: 'audioonly'});
-      c.play(stream);
+      this.add(res.url);
+      this.recursivePlay(c);
     });
   }
 
   stop(c) {
-    if(c.dispatcher) c.dispatcher.end();
+    if(c.dispatcher) {
+      let guildSettings = getGuildSettings(c.channel.guild.id);
+      guildSettings.musicQueue = [];
+      setGuildSettings(guildSettings);
+      c.dispatcher.end();
+      return true;
+    }
+    else return false;
   }
 
   pause(c) {
     if(c.dispatcher) {
       if(c.dispatcher.paused) c.dispatcher.resume()
       else c.dispatcher.pause()
-    }
+      return true;
+    } else return false;
+  }
+
+  add(c, url) {
+    let guildsettings = getGuildSettings(c.channel.guild.id);
+    if(guildsettings.musicQueue) guildsettings.musicQueue.push(url);
+    else return false;
+    setGuildSettings(guildsettings);
+    return true;
+  }
+
+  remove(c, index) {
+    let guildsettings = getGuildSettings(c.channel.guild.id);
+    if(guildsettings.musicQueue) if(guildsettings.musicQueue.length > index) guildsettings.musicQueue.splice(index, 1)
+    else return false;
+    setGuildSettings(guildsettings);
+    return true;
   }
 
   async searchYoutube(query) {
     let results = await ytsearch({query: query});
     return results.videos[0];
+  }
+
+  recursivePlay(c) {
+    let guildID = c.channel.guild.id;
+    let guildsettings = getGuildSettings(guildID);
+    if(guildsettings.musicQueue) {
+      if(guildsettings.musicQueue.length > 0) c.play(ytdl(guildsettings.musicQueue[0], {filter: 'audioonly'})) .on('finish', () => {
+        guildsettings.musicQueue.shift();
+        setGuildSettings(guildsettings);
+        this.recursivePlay(c);
+      });
+    }
   }
 }
 //////////////////////
@@ -914,7 +958,6 @@ client.on('message', (msg) => {
         });
       }
       musicBotAPI.play(msg.guild.me.voice.connection, query);
-      //if(msg.guild.me.voice.connection) musicBotAPI.play(query, msg.guild.me.voice.connection);
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'stop')) {
       errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
