@@ -913,7 +913,7 @@ client.on('message', (msg) => {
           c.setSpeaking('NONE');
         });
       }
-      musicBotAPI.play(c, query);
+      musicBotAPI.play(msg.guild.me.voice.connection, query);
       //if(msg.guild.me.voice.connection) musicBotAPI.play(query, msg.guild.me.voice.connection);
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'stop')) {
