@@ -961,7 +961,7 @@ client.on('message', (msg) => {
     else if(msg.content.toLowerCase().startsWith(prefix + 'stop')) {
       //errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
       if(msg.guild.me.voice.channel) if(msg.member.voice.channel.id == msg.guild.me.voice.channel.id) {
-        if(msg.guild.me.voice.connection.dispatcher) musicBotAPI.stop(msg.guild.me.voice.connection);
+        if(msg.guild.me.voice.connection) musicBotAPI.stop(msg.guild.me.voice.connection);
         else errorMessage(msg.channel, 'Nothing to stop!');
       } else errorMessage(msg.channel, 'You are not in the bot\'s voice channel!');
       else errorMessage(msg.channel, 'You are not in the bot\'s voice channel!');
