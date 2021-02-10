@@ -35,6 +35,7 @@ class MusicBot {
   play(c, query) {
     this.searchYoutube(query).then(res => {
       this.add(c, res.url);
+      if(!c.dispatcher) this.recursivePlay(c);
     });
   }
 
@@ -62,7 +63,6 @@ class MusicBot {
     if(guildsettings.musicQueue) guildsettings.musicQueue.push(url);
     else return false;
     setGuildSettings(c.channel.guild.id, guildsettings);
-    if(!c.dispatcher) this.recursivePlay(c);
     return true;
   }
 
