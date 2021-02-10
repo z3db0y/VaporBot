@@ -43,6 +43,7 @@ class MusicBot {
     this.searchYoutube(query).then(res => {
       this.add(c, res.url);
       if(!c.dispatcher) this.recursivePlay(c);
+      return true;
     });
   }
 
@@ -94,7 +95,8 @@ class MusicBot {
         this.remove(c, 0);
         this.recursivePlay(c);
       });
-    }
+      else this.recursivePlay(c);
+    } else this.recursivePlay(c);
   }
 }
 //////////////////////
