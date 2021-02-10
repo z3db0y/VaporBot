@@ -878,10 +878,9 @@ client.on('message', (msg) => {
       query = newArgs.join(' ');
       if(!guildsettings.activeVC) {
         if(!msg.member.voice.channel) return msg.channel.send('You are not in a voice channel!');
-        msg.member.voice.channel.join() .then(c => {
-          musicBotAPI.play(query, c, msg.guild.id);
-        });
+        msg.member.voice.channel.join() .then(c => {});
       }
+      musicBotAPI.play(query, msg.guild.me.voice.connection, msg.guild.id);
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'stop')) {
       errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
