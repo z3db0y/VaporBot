@@ -28,30 +28,27 @@ function successMessage(ch, msg) {
     }}) .catch(err => {});
 }
 
-function recursivePlay(con, channel) {
-    con.play(getQueue(channel.guild.id)[0]) .on('finish', () => {
-        let guildsettings = JSON.parse(fs.readFileSync(channel.guild.id));
+function recursivePlay(con, guildID) {
+    con.play(getQueue(guildID)[0]) .on('finish', () => {
+        let guildsettings = JSON.parse(fs.readFileSync(guildID));
         guildsettings.musicQueue.shift();
-        fs.writeFileSync(`${channel.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
-        recursivePlay(con, channel);
+        fs.writeFileSync(`${guildID}.json`, JSON.stringify(guildsettings, null, 2));
+        recursivePlay(con, guildID);
     });
 }
 
 var MusicBot = {
-    play: function (con, channel, query) {
+    play: function (con, guildID, query) {
         searchYouTube(query) .then(result => {
             this.add(result.url);
         });
-        if(getQueue(channel.guild.id).length > 0 && !con.dispatcher) recursivePlay(con, channel);
+        if(getQueue(guildID).length > 0 && !con.dispatcher) recursivePlay(con, guildID);
     },
 
-    add: function (channel, url) {
-        let guildsettings = JSON.parse(fs.readFileSync(channel.guild.id));
+    add: function (guildID, url) {
+        let guildsettings = JSON.parse(fs.readFileSync(guildID));
         guildsettings.musicQueue.push(url);
-        fs.writeFileSync(`${channel.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
-        ytdl.getInfo(url).then(info => {
-            successMessage(channel, `Added **${info.videoDetails.title}** to the queue successfully!`);
-        });
+        fs.writeFileSync(`${guildID}.json`, JSON.stringify(guildsettings, null, 2));
     }
 }
 
