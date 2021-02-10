@@ -910,7 +910,6 @@ client.on('message', (msg) => {
       if(!msg.guild.me.voice.connection) {
         if(!msg.member.voice.channel) return msg.channel.send('You are not in a voice channel!');
         msg.member.voice.channel.join() .then(c => {
-          c.setSpeaking('NONE');
         });
       }
       musicBotAPI.play(msg.guild.me.voice.connection, query);
