@@ -33,6 +33,13 @@ function setGuildSettings(guildID, settings) {
 
 class MusicBot {
   play(c, query) {
+    let guildsettings = getGuildSettings(c.channel.guild.id);
+    if(guildsettings.musicQueue.length > 0) {
+      guildsettings.musicQueue.forEach(song => {
+        guildsettings.musicQueue.shift();
+      });
+      setGuildSettings(c.channel.guild.id, guildsettings);
+    }
     this.searchYoutube(query).then(res => {
       this.add(c, res.url);
       if(!c.dispatcher) this.recursivePlay(c);
