@@ -42,7 +42,6 @@ class MusicBot {
     }
     this.searchYoutube(query).then(res => {
       this.add(c, res.url);
-      if(!c.dispatcher) this.recursivePlay(c);
       return true;
     });
   }
@@ -71,6 +70,7 @@ class MusicBot {
     if(guildsettings.musicQueue) guildsettings.musicQueue.push(url);
     else return false;
     setGuildSettings(c.channel.guild.id, guildsettings);
+    if(guildsettings.musicQueue.length == 1) this.recursivePlay(c); 
     return true;
   }
 
@@ -95,8 +95,7 @@ class MusicBot {
         this.remove(c, 0);
         this.recursivePlay(c);
       });
-      else setTimeout(this.recursivePlay(c), 1000);
-    } else setTimeout(this.recursivePlay(c), 1000);
+    }
   }
 }
 //////////////////////
