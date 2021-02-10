@@ -26,7 +26,7 @@ class MusicBot {
   play(c, query) {
     this.searchYoutube(query).then(res => {
       let stream = ytdl(res.url, {filter: 'audioonly'});
-      c.play(stream);
+      //c.play(stream);
       stream.pipe(fs.createWriteStream('./temp.mp3'));
     });
   }
