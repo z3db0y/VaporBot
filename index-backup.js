@@ -33,7 +33,7 @@ function setGuildSettings(guildID, settings) {
 class MusicBot {
   play(c, query) {
     this.searchYoutube(query).then(res => {
-      this.add(c, res.url);
+      console.log('\x1b[33[Debug] \x1b[0mAdded song to queue? \x1b[33m' + this.add(c, res.url) + '\x1b[0m');
       this.recursivePlay(c);
     });
   }
