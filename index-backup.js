@@ -399,7 +399,7 @@ client.on('message', (msg) => {
         return;
       }
       let userID = args[1].replace('<@!', '').replace('<@').replace('>', '');
-      if(!/^[0*$/.test(userID)) return errorMessage(msg.channel, 'Invalid user provided!');
+      if(!/^[0-9]*$/.test(userID)) return errorMessage(msg.channel, 'Invalid user provided!');
       if(client.users.resolve(userID).bot) return successMessage(msg.channel, 'User is a bot!');
       let newArgs = args;
       let reason;
