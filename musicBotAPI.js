@@ -38,7 +38,10 @@ function recursivePlay(con, channel) {
 }
 
 var MusicBot = {
-    play: function (con, channel) {
+    play: function (con, channel, query) {
+        searchYouTube(query) .then(result => {
+            this.add(result.url);
+        });
         if(getQueue(channel.guild.id).length > 0 && !con.dispatcher) recursivePlay(con, channel);
     },
 
