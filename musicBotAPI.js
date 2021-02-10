@@ -21,63 +21,34 @@ let onSongFinish = function (connection, guildID) {
     if(serverQueue.length > 0) connection.play(ytdl(serverQueue[0])) .on('finish', onSongFinish(connection, guildID));
 }
  
-//ytdl('https://www.youtube.com/watch?v=4THFRpw68oQ', {format: 'mp3'}).pipe(fs.createWriteStream('temp.mp3'));
+function successMessage(ch, msg) {
+    ch.send({embed: {
+        title: msg,
+        color: "0x00FF00"
+    }}) .catch(err => {});
+}
+
+function recursivePlay(con, channel) {
+    con.play(getQueue(channel.guild.id)[0]) .on('finish', () => {
+        let guildsettings = JSON.parse(fs.readFileSync(channel.guild.id));
+        guildsettings.musicQueue.shift();
+        fs.writeFileSync(`${channel.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
+        recursivePlay(con, channel);
+    });
+}
 
 var MusicBot = {
-    
+    play: function (con, channel) {
+        if(getQueue(channel.guild.id).length > 0 && !con.dispatcher) recursivePlay(con, channel);
+    },
 
-    play (query, connection, guildID) {
-        searchYouTube(query).then(results => {
-            console.dir(results);
-            this.add(results.url, guildID);
+    add: function (channel, url) {
+        let guildsettings = JSON.parse(fs.readFileSync(channel.guild.id));
+        guildsettings.musicQueue.push(url);
+        fs.writeFileSync(`${channel.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
+        ytdl.getInfo(url).then(info => {
+            successMessage(channel, `Added **${info.videoDetails.title}** to the queue successfully!`);
         });
-        if(!connection.dispatcher) connection.play(ytdl(this.queue(guildID)[0], {filter: 'audioonly'})) .on('finish', onSongFinish(connection, guildID));
-    },
-
-    pause (connection) {
-        if(connection.dispatcher) {
-            if(connection.dispatcher.paused) {
-                connection.dispatcher.resume()
-            } else connection.dispatcher.pause()
-        }
-    },
-
-    stop (connection) {
-        if(connection.dispatcher) {
-            connection.dispatcher.end();
-        }
-    },
-
-    skip (connection, guildID) {
-        let guildsettings = JSON.parse(fs.readFileSync(`${guildID}.json`));
-        if(!guildsettings.musicQueue) return false;
-        if(!connection.dispatcher) return false;
-        guildsettings.musicQueue.shift();
-        fs.writeFileSync(`${guildID}.json`, JSON.stringify(guildsettings, null, 2));
-        connection.dispatcher.end();
-    },
-
-    queue (guildID) {
-        let guildsettings = JSON.parse(fs.readFileSync(`${guildID}.json`));
-        if(!guildsettings.musicQueue) return false;
-        return guildsettings.musicQueue;
-    },
-
-    add (url, guildID) {
-        let guildsettings = JSON.parse(fs.readFileSync(`${guildID}.json`));
-        if(!guildsettings.musicQueue) return false;
-        guildsettings.musicQueue[guildsettings.musicQueue.length] = url;
-        fs.writeFileSync(`${guildID}.json`, JSON.stringify(guildsettings, null, 2));
-        return true;
-    },
-
-    remove (index, guildID) {
-        if(typeof index !== 'number') return false;
-        let guildsettings = JSON.parse(fs.readFileSync(`${guildID}.json`));
-        if(!guildsettings.musicQueue) return false;
-        guildsettings.musicQueue.splice(index, 1);
-        fs.writeFileSync(`${guildID}.json`, JSON.stringify(guildsettings, null, 2));
-        return true;
     }
 }
 
