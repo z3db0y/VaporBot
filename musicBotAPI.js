@@ -38,7 +38,7 @@ function recursivePlay(con, guildID) {
 }
 
 var MusicBot = {
-    play: function (con, guildID, query) {
+    play: function (query, con, guildID) {
         searchYouTube(query) .then(result => {
             this.add(result.url);
         });
