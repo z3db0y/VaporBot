@@ -95,8 +95,8 @@ class MusicBot {
         this.remove(c, 0);
         this.recursivePlay(c);
       });
-      else this.recursivePlay(c);
-    } else this.recursivePlay(c);
+      else setTimeout(this.recursivePlay(c), 1000);
+    } else setTimeout(this.recursivePlay(c), 1000);
   }
 }
 //////////////////////
