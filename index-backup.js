@@ -27,13 +27,14 @@ function getGuildSettings(guildID) {
 }
 
 function setGuildSettings(guildID, settings) {
-  return fs.writeFileSync(`${guildID}.json`, JSON.stringify(settings, null, 2));
+  fs.writeFileSync(`${guildID}.json`, JSON.stringify(settings, null, 2));
+  return true;
 }
 
 class MusicBot {
   play(c, query) {
     this.searchYoutube(query).then(res => {
-      console.log('\x1b[33m[Debug] \x1b[0mAdded song to queue? \x1b[33m' + this.add(c, res.url) + '\x1b[0m');
+      this.add(c, res.url);
       this.recursivePlay(c);
     });
   }
@@ -42,7 +43,7 @@ class MusicBot {
     if(c.dispatcher) {
       let guildSettings = getGuildSettings(c.channel.guild.id);
       guildSettings.musicQueue = [];
-      setGuildSettings(guildSettings);
+      setGuildSettings(c.channel.guild.id, guildSettings);
       c.dispatcher.end();
       return true;
     }
@@ -61,7 +62,7 @@ class MusicBot {
     let guildsettings = getGuildSettings(c.channel.guild.id);
     if(guildsettings.musicQueue) guildsettings.musicQueue.push(url);
     else return false;
-    setGuildSettings(guildsettings);
+    setGuildSettings(c.channel.guild.id, guildsettings);
     return true;
   }
 
@@ -69,7 +70,7 @@ class MusicBot {
     let guildsettings = getGuildSettings(c.channel.guild.id);
     if(guildsettings.musicQueue) if(guildsettings.musicQueue.length > index) guildsettings.musicQueue.splice(index, 1)
     else return false;
-    setGuildSettings(guildsettings);
+    setGuildSettings(c.channel.guild.id, guildsettings);
     return true;
   }
 
