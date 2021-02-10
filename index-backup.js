@@ -15,9 +15,40 @@ const { exit, emit } = require('process');
 const RainbowRoleAPI = require('./rainbowRoleAPI');
 const rainbowRoleAPI = new RainbowRoleAPI.RainbowRole();
 const premiumAPI = require('./premiumAPI');
-const musicBotAPI = require('./musicBotAPI');
+//const musicBotAPI = require('./musicBotAPI');
 const events = require('events');
 const developerEmitter = new events.EventEmitter();
+const ytdl = require('ytdl-core');
+const ytsearch = require('yt-search');
+const { doesNotMatch } = require('assert');
+
+class MusicBot {
+  play(c, query) {
+    this.searchYoutube(query).then(res => {
+      c.play(ytdl(res.url, {quality: 'highestaudio'}));
+    });
+  }
+
+  stop(c) {
+    if(c.dispatcher) c.dispatcher.end();
+  }
+
+  pause(c) {
+    if(c.dispatcher) {
+      if(c.dispatcher.paused) c.dispatcher.resume()
+      else c.dispatcher.pause()
+    }
+  }
+
+  async searchYoutube(query) {
+    let results = await ytsearch({query: query});
+    return results.videos[0];
+  }
+}
+//////////////////////
+//     IMPORTANT    //
+//////////////////////
+const musicBotAPI = new MusicBot();
 
 function validateURl(url) {
   let validUrlRegex = new RegExp(/(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#()?&//=]*)/g);
@@ -351,21 +382,7 @@ client.on('message', (msg) => {
       }
       let userID = args[1].replace('<@!', '').replace('<@', '').replace('>', '');
       if(!/^[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
-      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-      if(!guildsettings.warnings.find(e => e.user === userID)) {
-        errorMessage(msg.channel, 'This user has no warnings!');
-      } else {
-        let warns = guildsettings.warnings.find(e => e.user === userID).warns;
-        if(warns.length < 1) return errorMessage(msg.channel, 'This user has no warnings!');
-        let warnList = [];
-        for(var i = 0; i < warns.length; i++) {
-          if(i != warns.length-1) {
-            warnList[warnList.length] = {
-              name: `${i+1}. ${warns[i]}\n`,
-              value: '*.*'
-            }
-          } else warnList[warnList.length] = {
-            name: `${i+1}. ${warns[i]}`,
+      +1}. ${warns[i]}`,
             value: '*.*'
           }
         }
