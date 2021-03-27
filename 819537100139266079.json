@@ -1,0 +1,20 @@
+{
+  "prefix": "v!",
+  "logging": {
+    "enabled": false,
+    "logChannelId": null,
+    "actionsLogged": []
+  },
+  "store": null,
+  "rainbowRoles": [],
+  "lastLoggedUpdate": null,
+  "updateChannel": null,
+  "warnings": [],
+  "autokick": 0,
+  "autoban": 0,
+  "musicQueue": [],
+  "nowPlaying": null,
+  "lastPlayed": null,
+  "loopType": "song",
+  "devRole": "823840357661147146"
+}

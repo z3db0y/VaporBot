@@ -5,7 +5,7 @@
     "logChannelId": null,
     "actionsLogged": []
   },
-  "store": null,
+  "store": "http://wot11.webs.com",
   "rainbowRoles": [],
   "lastLoggedUpdate": null,
   "updateChannel": null,
@@ -14,7 +14,15 @@
       "user": "654036914126585896",
       "warns": [
         " abusive language",
-        "muted and deafened in VC"
+        "muted and deafened in VC",
+        "earrape not pleasant you know",
+        "nasty joke",
+        "sotp",
+        "earrape",
+        "spam?",
+        "earrape",
+        "COMPLAINIG ABOUT WARNINGS",
+        "bad behaviour"
       ]
     },
     {
@@ -24,9 +32,37 @@
     {
       "user": "759378622900469761",
       "warns": []
+    },
+    {
+      "user": "461801313374568451",
+      "warns": [
+        "Rule 4 | NSFW"
+      ]
+    },
+    {
+      "user": "528511298967830547",
+      "warns": [
+        "Rule 4 | NSFW"
+      ]
+    },
+    {
+      "user": "611227008818610176",
+      "warns": [
+        "No reason provided."
+      ]
     }
   ],
   "autokick": 5,
   "autoban": 10,
-  "musicQueue": []
+  "musicQueue": [
+    {
+      "url": "https://youtube.com/watch?v=NO4QAufvot8",
+      "title": "WildVibes, David Bulla & LionX - The One [FREE DOWNLOAD]"
+    }
+  ],
+  "nowPlaying": 0,
+  "lastPlayed": -1,
+  "twentyFourSeven": 1,
+  "loopType": "song",
+  "devRole": "808567334997458977"
 }

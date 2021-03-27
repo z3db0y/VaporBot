@@ -2,6 +2,7 @@
 
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
+let musicBotTmeouts = {};
 
 const BOT_CHANNEL = botChannels.BETA;
 
@@ -20,7 +21,8 @@ const events = require('events');
 const developerEmitter = new events.EventEmitter();
 const ytdl = require('ytdl-core');
 const ytsearch = require('yt-search');
-const { doesNotMatch } = require('assert');
+const az = require('azlyrics-scraper');
+const roundToNearest5 = x => Math.round(x/5)*5;
 
 function getGuildSettings(guildID) {
   return JSON.parse(fs.readFileSync(`${guildID}.json`));
@@ -32,26 +34,50 @@ function setGuildSettings(guildID, settings) {
 }
 
 class MusicBot {
-  play(c, query) {
-    let guildsettings = getGuildSettings(c.channel.guild.id);
-    if(guildsettings.musicQueue.length > 0) {
-      guildsettings.musicQueue.forEach(song => {
-        guildsettings.musicQueue.shift();
+
+  play(c, query, reset) {
+    let guildsettings = getGuildSettings(c.guild.id);
+    if(reset) this.resetQueue(c.guild.id);
+    if(query.includes('youtube.com')) {
+      let url;
+      try {
+        url = new URL(query);
+      }
+      catch (_) {
+        try {
+          url = new URL(`https://${query}`);
+        } catch (_) {}
+      }
+      if(url) {
+        if(url.searchParams.has('v')) {
+          let ytURL = 'https://youtube.com/watch?v=' + url.searchParams.get('v');
+          ytdl.getInfo(ytURL).then(video => {
+            this.add(c, ytURL, video.videoDetails.title);
+            if(guildsettings.nowPlaying === null) this.recursivePlay(c);
+          }) .catch(err => {
+            return errorMessage(c, 'Unable to play song.');
+          });
+        } else return errorMessage(c, 'Invalid YouTube URL!');
+      }
+      else return errorMessage(c, 'Invalid YouTube URL!');
+    } else {
+      this.searchYoutube(query).then(res => {
+        this.add(c, res.url, res.title);
+        if(guildsettings.nowPlaying === null) this.recursivePlay(c);
+      }) .catch(err => {
+        return errorMessage(c, 'Nothing found.');
       });
-      setGuildSettings(c.channel.guild.id, guildsettings);
     }
-    this.searchYoutube(query).then(res => {
-      this.add(c, res.url);
-      return true;
-    });
   }
 
   stop(c) {
-    if(c.dispatcher) {
-      let guildSettings = getGuildSettings(c.channel.guild.id);
+    if(c.guild.me.voice.connection.dispatcher) {
+      let guildSettings = getGuildSettings(c.guild.id);
       guildSettings.musicQueue = [];
-      setGuildSettings(c.channel.guild.id, guildSettings);
-      c.dispatcher.end();
+      guildSettings.nowPlaying = null;
+      guildSettings.loopType = null;
+      setGuildSettings(c.guild.id, guildSettings);
+      c.guild.me.voice.connection.dispatcher.end()
       return true;
     }
     else return false;
@@ -65,21 +91,12 @@ class MusicBot {
     } else return false;
   }
 
-  add(c, url) {
-    let guildsettings = getGuildSettings(c.channel.guild.id);
-    if(guildsettings.musicQueue) guildsettings.musicQueue.push(url);
-    else return false;
-    setGuildSettings(c.channel.guild.id, guildsettings);
-    if(guildsettings.musicQueue.length == 1) this.recursivePlay(c); 
-    return true;
-  }
-
-  remove(c, index) {
-    let guildsettings = getGuildSettings(c.channel.guild.id);
-    if(guildsettings.musicQueue) if(guildsettings.musicQueue.length > index) guildsettings.musicQueue.splice(index, 1)
-    else return false;
-    setGuildSettings(c.channel.guild.id, guildsettings);
-    return true;
+  add(c, url, title) {
+    let guildsettings = getGuildSettings(c.guild.id);
+    if(guildsettings.musicQueue) guildsettings.musicQueue.push({"url": url, "title": title});
+    else errorMessage(c, 'Failed to add to queue.');
+    setGuildSettings(c.guild.id, guildsettings);
+    return successMessage(c, `Added **${title}** to the queue!`);
   }
 
   async searchYoutube(query) {
@@ -88,14 +105,74 @@ class MusicBot {
   }
 
   recursivePlay(c) {
-    let guildID = c.channel.guild.id;
-    let guildsettings = getGuildSettings(guildID);
-    if(guildsettings.musicQueue) {
-      if(guildsettings.musicQueue.length > 0) c.play(ytdl(guildsettings.musicQueue[0], {filter: 'audioonly'})) .on('finish', () => {
-        this.remove(c, 0);
+    clearTimeout(musicBotTmeouts[c.guild.id]);
+    musicBotTmeouts[c.guild.id] = null;
+    let guildsettings = getGuildSettings(c.guild.id);
+    if(guildsettings.musicQueue != null) {
+      if(guildsettings.nowPlaying == null) {
+        if(guildsettings.lastPlayed == null) guildsettings.nowPlaying = 0;
+        else guildsettings.nowPlaying = guildsettings.lastPlayed + 1;
+        setGuildSettings(c.guild.id, guildsettings);
+      }
+      if(guildsettings.musicQueue.length > guildsettings.nowPlaying) c.guild.me.voice.connection.play(ytdl(guildsettings.musicQueue[guildsettings.nowPlaying].url, {filter: 'audioonly'})) .on('finish', () => {
+        guildsettings = getGuildSettings(c.guild.id);
+        if(!guildsettings.twentyFourSeven && c.guild.me.voice.channel.members.size < 2) {
+          try { c.guild.me.voice.connection.disconnect(); }
+          catch (err) {}
+          return errorMessage(c, 'I have left your channel because of inactivity! Type ' + guildsettings.prefix + '24/7 to get rid of this.');
+        }
+        if(guildsettings.loopType == 'song') {
+          guildsettings.lastPlayed = guildsettings.nowPlaying -1;
+        }
+        else guildsettings.lastPlayed = guildsettings.nowPlaying;
+        guildsettings.nowPlaying = null;
+        setGuildSettings(c.guild.id, guildsettings);
         this.recursivePlay(c);
       });
+      else {
+        guildsettings = getGuildSettings(c.guild.id);
+        if(guildsettings.loopType === 'queue') {
+          guildsettings.lastPlayed = null;
+          guildsettings.nowPlaying = 0;
+          setGuildSettings(c.guild.id, guildsettings);
+          if(guildsettings.musicQueue) this.recursivePlay(c);
+        } else {
+          guildsettings.lastPlayed = guildsettings.musicQueue.length-1
+          guildsettings.nowPlaying = null;
+          musicBotTmeouts[c.guild.id] = setTimeout(() => {
+            if(getGuildSettings(c.guild.id).twentyFourSeven) return musicBotTmeouts[c.guild.id] = null;
+            try { c.guild.me.voice.connection.disconnect(); }
+            catch (err) {}
+            errorMessage(c, 'I have left your channel because of inactivity! Type ' + guildsettings.prefix + '24/7 to get rid of this.');
+          }, 10 * 60 * 1000);
+        }
+        setGuildSettings(c.guild.id, guildsettings);
+      }
     }
+  }
+
+  remove(c, i) {
+    let guildsettings = getGuildSettings(c.channel.guild.id);
+    if(guildsettings.musicQueue) {
+      if(guildsettings.musicQueue.length > i) {
+        guildsettings.musicQueue.splice(i, 1);
+        setGuildSettings(c.channel.guild.id, guildsettings);
+        return true;
+      } else return false
+    } else return false
+  }
+
+  resetQueue(guildID) {
+    let guildsettings = getGuildSettings(guildID);
+    guildsettings.musicQueue = [];
+    guildsettings.nowPlaying = null;
+    guildsettings.lastPlayed = null;
+    setGuildSettings(guildID, guildsettings);
+  }
+
+  fetchQueue(guildID) {
+    let guildsettings = getGuildSettings(guildID);
+    return guildsettings.musicQueue;
   }
 }
 //////////////////////
@@ -111,6 +188,16 @@ function validateURl(url) {
 
 client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
+    client.sendInteractionEmbed = (embed, interaction_id, interaction_token) => {
+      client.api.interactions(interaction_id, interaction_token).callback.post({
+        data: {
+          type: 4,
+          data: {
+            embeds: [embed]
+          }
+        }
+      });
+    };
     if(BOT_CHANNEL == 0) {
       client.user.setPresence({activity: {type: "PLAYING", name: "Vapor Beta | Buggy and mostly offline"}, status: 'idle', afk: false})
       .then(() => {
@@ -126,6 +213,7 @@ client.on('ready', () => {
     updateAPI.init(client);
     let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
     client.guilds.cache.forEach((guild) => {
+        initSlashCommands(guild);
         let guildsettings = JSON.parse(fs.readFileSync(`${guild.id}.json`));
         guildAPI.initialiseGuild(guild);
         rainbowRoleAPI.runRainbowRole(client, guild.id);
@@ -155,14 +243,13 @@ client.on('guildMemberAdd', (member) => {
   }
 });
 
-client.on('message', (msg) => {
-    let filename;
-    try{
-        filename = msg.guild.id.toString() + ".json";
-    }
-    catch (err) {
-        return;
-    }
+client.on('guildMemberRemove', (u) => {
+
+});
+
+client.on('message', async (msg) => {
+    if(!msg.guild) return;
+    let filename = msg.guild.id.toString() + ".json";
     let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
     if(!fs.existsSync(filename)) {
         guildAPI.repairFiles(msg.guild);
@@ -172,7 +259,10 @@ client.on('message', (msg) => {
         return;
     }
     if(msg.content.toLowerCase().startsWith(prefix + 'help')) {
-        msg.channel.send({ embed: {
+        console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}help\x1b[0m.`);
+        let args = msg.content.toLowerCase().split(' ');
+        if(args.length < 2) {
+          msg.channel.send({ embed: {
             title: "Vapor Help",
             color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
             author: {
@@ -184,88 +274,188 @@ client.on('message', (msg) => {
             },
             fields: [
                 {
-                    name: prefix + "ban",
-                    value: "Bans a user."
+                    name: prefix + "help moderation",
+                    value: "Shows moderation commands."
                 },
                 {
-                    name: prefix + "unban",
-                    value: "Unbans a user."
+                    name: prefix + "help music",
+                    value: "Shows music commands."
                 },
                 {
-                    name: prefix + "kick",
-                    value: "Kicks a user."
-                },
-                {
-                    name: prefix + "warn",
-                    value: "Warns a user."
-                },
-                {
-                    name: prefix + "delwarn",
-                    value: "Removes a warning for a user."
-                },
-                {
-                    name: prefix + "warnings | " + prefix + "warns",
-                    value: "Shows a user's warnings."
-                },
-                {
-                    name: prefix + "purge",
-                    value: "Removes amount of messages specified."
-                },
-                {
-                    name: prefix + "play",
-                    value: "Plays a song in your voice channel."
-                },
-                {
-                    name: prefix + "pause",
-                    value: "Pauses current song (music bot)."
-                },
-                {
-                    name: prefix + "stop",
-                    value: "Stops the current song (music bot)."
-                },
-                {
-                    name: prefix + "queue",
-                    value: "Displays the song queue (music bot)."
-                },
-                {
-                    name: prefix + "add",
-                    value: "Adds a song to the queue (music bot)."
-                },
-                {
-                    name: prefix + "remove",
-                    value: "Removes a song from the queue (music bot)."
-                },
-                {
-                    name: prefix + "join",
-                    value: "Makes bot join your voice channel."
-                },
-                {
-                    name: prefix + "disconnect | " + prefix + "dc",
-                    value: "Makes bot leave your voice channel."
-                },
-                {
-                    name: prefix + "autokick",
-                    value: "Set amount of warnings before a user is automatically kicked from the server."
-                },
-                {
-                    name: prefix + "autoban",
-                    value: "Set amount of warnings before a user is automatically banned from the server."
-                },
-                {
-                    name: prefix + "store",
-                    value: "Link to server store."
-                },
-                {
-                    name: prefix + "setstore",
-                    value: "Set the link to server store."
-                },
-                {
-                    name: prefix + "setprefix",
-                    value: "Update the guild's prefix."
+                    name: prefix + "help misc",
+                    value: "Shows other commands not listed in any category."
                 }
             ],
             timestamp: new Date()
         } }) .catch(err => checkError(err.message, msg.channel));
+        } else {
+          switch(args[1]) {
+            case 'moderation':
+              msg.channel.send({ embed: {
+                title: "Vapor Help (Moderation)",
+                color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
+                author: {
+                    name: msg.author.tag,
+                    icon_url: msg.author.avatarURL()
+                },
+                thumbnail: {
+                    url: client.user.avatarURL()
+                },
+                fields: [
+                  {
+                      name: prefix + "ban",
+                      value: "Ban a user."
+                  },
+                  {
+                      name: prefix + "kick",
+                      value: "Kick a user."
+                  },
+                  {
+                      name: prefix + "warns | " + prefix + "warnings",
+                      value: "Shows a user's warnings."
+                  },
+                  {
+                      name: prefix + "warn",
+                      value: "Warn a user."
+                  },
+                  {
+                      name: prefix + "autokick",
+                      value: "Set the warnings until a user is kicked."
+                  },
+                  {
+                      name: prefix + "autoban",
+                      value: "Set the warnings until a user is banned."
+                  },
+                  {
+                      name: prefix + "purge",
+                      value: "Delete amout of messages specified."
+                  },
+                  {
+                      name: prefix + "setstore",
+                      value: "Sets the store of the server. It can be viewed by executing the store command."
+                  },
+                  {
+                      name: prefix + "setprefix",
+                      value: "Update the bot's prefix."
+                  }
+                ],
+                timestamp: new Date()
+              } }) .catch(err => checkError(err.message, msg.channel));
+              break;
+            case 'music':
+              msg.channel.send({ embed: {
+                title: "Vapor Help (Music)",
+                color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
+                author: {
+                    name: msg.author.tag,
+                    icon_url: msg.author.avatarURL()
+                },
+                thumbnail: {
+                    url: client.user.avatarURL()
+                },
+                fields: [
+                  {
+                      name: prefix + "play | " + prefix + "p",
+                      value: "Play a song in your voice channel."
+                  },
+                  {
+                      name: prefix + "nowplaying | " + prefix + "np",
+                      value: "Display currently playing song."
+                  },
+                  {
+                      name: prefix + "loop",
+                      value: "Change loop type."
+                  },
+                  {
+                      name: prefix + "pause",
+                      value: "Pause current song."
+                  },
+                  {
+                      name: prefix + "stop",
+                      value: "Stop current song."
+                  },
+                  {
+                      name: prefix + "queue | " + prefix + "q",
+                      value: "Display song queue."
+                  },
+                  {
+                      name: prefix + "add",
+                      value: "Add a song to the queue."
+                  },
+                  {
+                      name: prefix + "remove",
+                      value: "Remove a song from the queue."
+                  },
+                  {
+                      name: prefix + "join",
+                      value: "Make bot join your voice channel."
+                  },
+                  {
+                      name: prefix + "24/7",
+                      value: "Make bot stay in voice channel without inactivity timeout."
+                  },
+                  {
+                      name: prefix + "lyrics",
+                      value: "Show lyrics of a song."
+                  }
+                ],
+                timestamp: new Date()
+              } }) .catch(err => checkError(err.message, msg.channel));
+              break;
+            case 'misc':
+              msg.channel.send({ embed: {
+                title: "Vapor Help (Misc)",
+                color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
+                author: {
+                    name: msg.author.tag,
+                    icon_url: msg.author.avatarURL()
+                },
+                thumbnail: {
+                    url: client.user.avatarURL()
+                },
+                fields: [
+                  {
+                      name: prefix + "store",
+                      value: "Go to the server's store. (See setstore command.)"
+                  },
+                  {
+                      name: prefix + "invite",
+                      value: "Invite the bot to your server."
+                  }
+                ],
+                timestamp: new Date()
+              } }) .catch(err => checkError(err.message, msg.channel));
+              break;
+            default:
+              msg.channel.send({ embed: {
+                title: "Vapor Help",
+                color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
+                author: {
+                    name: msg.author.tag,
+                    icon_url: msg.author.avatarURL()
+                },
+                thumbnail: {
+                    url: client.user.avatarURL()
+                },
+                fields: [
+                    {
+                        name: prefix + "help moderation",
+                        value: "Shows moderation commands."
+                    },
+                    {
+                        name: prefix + "help music",
+                        value: "Shows music commands."
+                    },
+                    {
+                        name: prefix + "help misc",
+                        value: "Shows other commands not listed in any category."
+                    }
+                ],
+                timestamp: new Date()
+              } }) .catch(err => checkError(err.message, msg.channel));
+              break;
+          }
+        }
         msg.channel.send({embed: {
           title: "Still Need Help?",
             color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
@@ -281,18 +471,18 @@ client.on('message', (msg) => {
         }}) .catch(err => checkError(err.message));
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'updateconfigs')) {
-        if(msg.author.id == "740167253491843094") {
-            client.guilds.cache.forEach((guild) => {
-                guildAPI.updateConfig(guild);
-                if(guild.owner) {
-                  guild.owner.send('**Vapor** has updated his configs! Set it up again please!');
-                }
-             });
-             msg.author.send('You have updated everybody\'s configs!');
-        }
+      let formattedMessage = "";
+      if(msg.author.id == "740167253491843094") {
+          client.guilds.cache.forEach((guild) => {
+              guildAPI.updateConfig(guild);
+              formattedMessage += '- ' + guild.name + '\n';
+          });
+          successMessage(msg.channel, 'You have updated: \n```' + formattedMessage + '```');
+      }
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'setprefix')) {
         if(msg.member.hasPermission('ADMINISTRATOR') || botDevelopers.includes(msg.member.id)) {
+            console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}setprefix\x1b[0m.`);
             let args = msg.content.split(' ');
             let rawData = JSON.parse(fs.readFileSync(filename));
             args.splice(0, 1);
@@ -312,6 +502,7 @@ client.on('message', (msg) => {
           return;
         }
       }
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}ban\x1b[0m.`);
       let args = msg.content.split(' ');
       if(args.length < 2) {
         errorMessage(msg.channel, 'Usage: ' + prefix + 'ban <UserID>|<@User>');
@@ -354,6 +545,7 @@ client.on('message', (msg) => {
           return;
         }
       }
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}unban\x1b[0m.`);
       let args = msg.content.split(' ');
       if(args.length < 2) {
         errorMessage(msg.channel, 'Usage: ' + prefix + 'unban <UserID>|<@User>');
@@ -401,6 +593,7 @@ client.on('message', (msg) => {
           return;
         }
       }
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}kick\x1b[0m.`);
       let args = msg.content.split(' ');
       if(args.length < 2) {
         errorMessage(msg.channel, 'Usage: ' + prefix + 'kick <UserID>|<@User>');
@@ -428,6 +621,7 @@ client.on('message', (msg) => {
           return;
         }
       }
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}warnings\x1b[0m.`);
       let args = msg.content.split(' ');
       if(args.length < 2) {
         errorMessage(msg.channel, 'Usage: ' + prefix + 'warnings <UserID>|<@User>');
@@ -453,9 +647,12 @@ client.on('message', (msg) => {
             value: '*.*'
           }
         }
-        let userTag = client.users.resolve(userID).tag;
+        let userTag;
+        msg.guild.members.fetch(userID) .then(user => {
+          userTag = user.user.tag;
+        }) .catch(err => {});
         msg.channel.send({ embed: {
-          title: `${userTag}'s Warnings`,
+          title: `${userTag ? userTag : userID}'s Warnings`,
           thumbnail: {
             url: client.user.avatarURL()
           },
@@ -471,6 +668,7 @@ client.on('message', (msg) => {
           return;
         }
       }
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}warn\x1b[0m.`);
       let args = msg.content.split(' ');
       if(args.length < 2) {
         errorMessage(msg.channel, 'Usage: ' + prefix + 'warn <UserID>|<@User>');
@@ -518,6 +716,7 @@ client.on('message', (msg) => {
           return;
         }
       }
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}delwarn\x1b[0m.`);
       let args = msg.content.split(' ');
       if(args.length < 3) {
         errorMessage(msg.channel, 'Usage: ' + prefix + 'delwarn <UserID>|<@User> <WarningID>');
@@ -543,6 +742,7 @@ client.on('message', (msg) => {
           return;
         }
       }
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}autokick\x1b[0m.`);
       let args = msg.content.split(' ');
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       if(args.length < 2) {
@@ -567,6 +767,7 @@ client.on('message', (msg) => {
           return;
         }
       }
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}autoban\x1b[0m.`);
       let args = msg.content.split(' ');
       let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
       if(args.length < 2) {
@@ -589,6 +790,7 @@ client.on('message', (msg) => {
             errorMessage(msg.channel, 'This server has no store');
         }
         else {
+            console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}store\x1b[0m.`);
             msg.channel.send({ embed: {
                 title: "Click Here to go to the server's store!",
                 url: JSON.parse(fs.readFileSync(filename)).store,
@@ -603,6 +805,7 @@ client.on('message', (msg) => {
           return;
         }
       }
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}setstore\x1b[0m.`);
       let args = msg.content.split(' ');
       if(args.length < 2) return errorMessage(msg.channel, 'Usage: ' + prefix + 'setstore <URL>');
       if(args[1].toLowerCase().startsWith('none')) {
@@ -623,6 +826,7 @@ client.on('message', (msg) => {
         permissionDenied(msg.channel, "BOT_DEVELOPER");
         return;
       }
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}rainbowrole\x1b[0m.`);
       if(msg.content.length < prefix.length+33) {
         errorMessage(msg.channel, 'Invalid usage! Use: ' + prefix + 'rainbowrole <ROLE>');
         return;
@@ -657,26 +861,17 @@ client.on('message', (msg) => {
           return;
         }
       }
-      if(msg.content.length < prefix.length+7) {
-        errorMessage(msg.channel, 'Usage: ' + prefix + 'purge <number>');
-        return;
-      }
-      let args = msg.content.substring(prefix.length+6).split(' ');
-      if(!/^[0-9]*$/.test(args[0])) {
-        errorMessage(msg.channel, 'Amount must be a number!');
-        return;
-      }
-      var purgeAmount = parseInt(args[0]);
-      try {
-        msg.channel.messages.fetch({limit: purgeAmount}) .then((messages) => {
-          messages.forEach(m => m.delete() .catch(err => {}));
-          successMessage(msg.channel, 'Successfully deleted ' + purgeAmount + ' messages!');
-        }) .catch(err => { return errorMessage(msg.channel, `Error: ${err.message}`)});
-      } catch (err) {
-        errorMessage(msg.channel, 'An error has occurred! Please try again.');
-      };
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}purge\x1b[0m.`);
+      let args = msg.content.toLowerCase().split(' ');
+      if(isNaN(parseInt(args[1]))) return errorMessage(msg.channel, 'Invalid number specified.');
+      if(parseInt(args[1]) > 100) return errorMessage(msg.channel, 'Number must be less than or equal to 100.');
+      
+      msg.channel.bulkDelete(parseInt(args[1])) .then(m => {
+        successMessage(msg.channel, `Successfully deleted ${args[1]} messages!`);
+      }) .catch(err => errorMessage(msg.channel, 'ERROR: ' + err));
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'info')) {
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}info\x1b[0m.`);
       let developerServers = [];
       let goldServers = [];
       let silverServers = [];
@@ -762,6 +957,7 @@ client.on('message', (msg) => {
       }});
     }
     else if (msg.content.toLowerCase().startsWith(prefix + 'passwordprotect')) {
+      // console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}passwordprotect\x1b[0m.`);
       /*if(!msg.member.hasPermission('ADMINISTRATOR')) {
         if(!botDevelopers.includes(msg.member.id)) {
           permissionDenied(msg.channel, "ADMINISTRATOR");
@@ -951,57 +1147,452 @@ client.on('message', (msg) => {
           break;
       }
     }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'play')) {
-      //errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
-      var guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-      let args = msg.content.split(' ');
-      let query;
-      if(args.length < 2) return msg.channel.send('Usage: ' + prefix + 'play <SearchText>');
-      let newArgs = args;
-      newArgs.splice(0, 1);
-      query = newArgs.join(' ');
-      if(!msg.guild.me.voice.connection) {
-        if(!msg.member.voice.channel) return msg.channel.send('You are not in a voice channel!');
-        msg.member.voice.channel.join() .then(c => {
-        });
-      }
-      musicBotAPI.play(msg.guild.me.voice.connection, query);
-    }
     else if(msg.content.toLowerCase().startsWith(prefix + 'stop')) {
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}stop\x1b[0m.`);
       //errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
       if(msg.guild.me.voice.channel) if(msg.member.voice.channel.id == msg.guild.me.voice.channel.id) {
-        if(msg.guild.me.voice.connection) musicBotAPI.stop(msg.guild.me.voice.connection);
+        if(msg.guild.me.voice.connection) {
+          let stopSong = musicBotAPI.stop(msg.channel);
+          if(stopSong) successMessage(msg.channel, 'Successfully stopped the playback!');
+        }
         else errorMessage(msg.channel, 'Nothing to stop!');
       } else errorMessage(msg.channel, 'You are not in the bot\'s voice channel!');
       else errorMessage(msg.channel, 'You are not in the bot\'s voice channel!');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'pause')) {
-      //errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}pause\x1b[0m.`);
+      if(!msg.guild.me.voice.channel) return errorMessage(msg.channel, 'I am not in a voice channel!');
+      if(!msg.guild.me.voice.connection.dispatcher) return errorMessage(msg.channel, 'Nothing playing!');
       if(msg.guild.me.voice.channel) if(msg.member.voice.channel.id == msg.guild.me.voice.channel.id) {
         if(msg.guild.me.voice.connection.dispatcher) musicBotAPI.pause(msg.guild.me.voice.connection);
         else errorMessage(msg.channel, 'Nothing to pause!');
         if(msg.guild.me.voice.connection.dispatcher.paused) successMessage(msg.channel, 'Paused playback.');
         else successMessage(msg.channel, 'Resumed playback.');
-      } else errorMessage(msg.channel, 'You are not in the bot\'s voice channel!');
-      else errorMessage(msg.channel, 'You are not in the bot\'s voice channel!');
+      } else errorMessage(msg.channel, 'You are not in the my voice channel!');
+      else errorMessage(msg.channel, 'You are not in the my voice channel!');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'skip')) {
-      errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'queue')) {
-      errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}skip\x1b[0m.`);
+      if(!msg.guild.me.voice.channelID) {
+        return errorMessage(msg.channel, 'I am not in a voice channel!');
+      }
+      if(!msg.member.voice.channelID) {
+        return errorMessage(msg.channel, 'You are not in my voice channel!');
+      }
+      if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) {
+        return errorMessage(msg.channel, 'You are not in my voice channel!');
+      }
+      if(!msg.guild.me.voice.connection.dispatcher) return errorMessage(msg.channel, 'I am not playing anything!');
+      msg.guild.me.voice.connection.dispatcher.end();
+      successMessage(msg.channel, 'Skipped track!');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'add')) {
-      errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}add\x1b[0m.`);
+      //errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
+      var guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+      let args = msg.content.split(' ');
+      let query;
+      if(args.length < 2) {
+        if(!msg.guild.me.voice.channelID) return errorMessage(msg.channel, 'Usage: ' + prefix + 'add <Query>');
+        if(!msg.member.voice.channelID) return errorMessage(msg.channel, 'You are not in my voice channel!');
+        if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return errorMessage(msg.channel, 'You are not in my voice channel!');
+        if(!msg.guild.me.voice.connection) return errorMessage(msg.channel, 'An unknown error occured. If the bot is in a voice channel, please disconnect it using admin and try again.');
+      }
+      let newArgs = args;
+      newArgs.splice(0, 1);
+      query = newArgs.join(' ');
+      if(!msg.guild.me.voice.connection) {
+        if(!msg.member.voice.channel) return errorMessage('You are not in a voice channel!');
+        msg.member.voice.channel.join() .then(c => {
+          c.voice.setSelfDeaf(true);
+          let guildsettings = getGuildSettings(msg.guild.id);
+          guildsettings.loopType = null;
+          setGuildSettings(msg.guild.id, guildsettings);
+          c.on('disconnect', () => {
+            musicBotAPI.resetQueue(msg.guild.id);
+          })
+        }) .catch(err => errorMessage(msg.channel, "ERROR: " + err));
+      } else {
+        if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return errorMessage(msg.channel, 'You are not in my voice channel!');
+      }
+      musicBotAPI.play(msg.channel, query, false);
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'remove')) {
-      errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
+      //errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}remove\x1b[0m.`);
+      if(!msg.guild.me.voice.channel) return errorMessage(msg.channel, 'I am not in a voice channel!');
+      if(!msg.member.voice.channel) return errorMessage(msg.channel, 'You are not in my voice channel!');
+      if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return errorMessage(msg.channel, 'You are not in my voice channel!');
+      let args = msg.content.split(' ');
+      if(args.length < 2) return errorMessage(msg.channel, 'Invalid song ID!');
+      if(isNaN(parseInt(args[1]-1))) return errorMessage(msg.channel, 'Invalid song ID!');
+      if(parseInt(args[1]-1) <= -1) return errorMessage(msg.channel, 'Invalid song ID!');
+      let remove = musicBotAPI.remove(msg.guild.me.voice.connection, parseInt(args[1]-1));
+      if(remove) successMessage(msg.channel, 'Removed song **' + args[1] + '** from the queue!');
+      else errorMessage(msg.channel, 'Invalid song ID!');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'disconnect') || msg.content.toLowerCase().startsWith(prefix + 'dc')) {
-      errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}disconnect\x1b[0m.`);
+      //errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
+      if(!msg.guild.me.voice.channel) return errorMessage(msg.channel, 'I am not in a voice channel!');
+      if(!msg.member.voice.channel) return errorMessage(msg.channel, 'You are not in a voice channel!');
+      if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return errorMessage(msg.channel, 'I am not in your voice channel!');
+      musicBotAPI.resetQueue(msg.guild.id);
+      msg.guild.voice.channel.leave();
+      successMessage(msg.channel, 'I left your voice channel!');
     }
     else if(msg.content.toLowerCase().startsWith(prefix + 'join')) {
-      errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
+      //errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}join\x1b[0m.`);
+      if(msg.guild.me.voice.channel) return errorMessage(msg.channel, 'I\'m already in a voice channel!');
+      if(!msg.member.voice.channel) return errorMessage(msg.channel, 'You are not in a voice channel!');
+      msg.member.voice.channel.join() .then(c => {
+        
+        let guildsettings = getGuildSettings(msg.guild.id);
+        guildsettings.loopType = null;
+        setGuildSettings(msg.guild.id, guildsettings);
+        c.on('disconnect', () => {
+          c.voice.setSelfDeaf(true);
+          musicBotAPI.resetQueue(msg.guild.id);
+        });
+      }) .catch(err => errorMessage(msg.channel, "ERROR: " + err));
+      successMessage(msg.channel, 'Joined your voice channel!');
+      musicBotTmeouts[msg.guild.id] = setTimeout(() => {
+        if(getGuildSettings(msg.guild.id).twentyFourSeven) return musicBotTmeouts[msg.guild.id] = null;
+        try { msg.guild.me.voice.connection.disconnect(); }
+        catch (err) {}
+        errorMessage(c, 'I have left your channel because of inactivity! Type ' + prefix + '24/7 to get rid of this.');
+      }, 10 * 60 * 1000);
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + '24/7')) {
+      let allowedTypes = ['Silver', 'Gold', 'Developer'];
+      if(!allowedTypes.includes(premiumAPI.getGuildType(msg.guild.id, client))) return errorMessage(msg.channel, 'You need *Vapor Silver* or *Vapor Gold* to use this feature!');
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}24/7\x1b[0m.`);
+      if(msg.guild.me.voice.channelID !== msg.member.voice.channelID) return errorMessage(msg.channel, 'You are not in my voice channel!');
+      let args = msg.content.toLowerCase().split(' ');
+      var guildsettings = getGuildSettings(msg.guild.id);
+      if(args.length == 1) {
+        if(guildsettings.twentyFourSeven) {
+          guildsettings.twentyFourSeven = 0;
+          setGuildSettings(msg.guild.id, guildsettings);
+          successMessage(msg.channel, '24/7 is now OFF.');
+        } else {
+          guildsettings.twentyFourSeven = 1;
+          setGuildSettings(msg.guild.id, guildsettings);
+          successMessage(msg.channel, '24/7 is now ON.');
+        }
+      } else {
+        switch(args[1]) {
+          case 'on':
+          case 'yes':
+            guildsettings.twentyFourSeven = 1;
+            setGuildSettings(msg.guild.id, guildsettings);
+            successMessage(msg.channel, '24/7 is now ON.');
+            break;
+          case 'off':
+          case 'no':
+            guildsettings.twentyFourSeven = 0;
+            setGuildSettings(msg.guild.id, guildsettings);
+            successMessage(msg.channel, '24/7 is now OFF.');
+            break;
+          default:
+            if(guildsettings.twentyFourSeven) {
+              guildsettings.twentyFourSeven = 0;
+              setGuildSettings(msg.guild.id, guildsettings);
+              successMessage(msg.channel, '24/7 is now OFF.');
+            } else {
+              guildsettings.twentyFourSeven = 1;
+              setGuildSettings(msg.guild.id, guildsettings);
+              successMessage(msg.channel, '24/7 is now ON.');
+            }
+            break
+        }
+      }
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'loop')) {
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}loop\x1b[0m.`);
+      if(msg.guild.me.voice.channelID !== msg.member.voice.channelID) return errorMessage(msg.channel, 'You are not in my voice channel!');
+      let args = msg.content.toLowerCase().split(' ');
+      let guildsettings = getGuildSettings(msg.guild.id);
+      if(args.length == 1) {
+        switch(guildsettings.loopType) {
+          case null:
+            guildsettings.loopType = 'song';
+            break;
+          case 'song':
+            guildsettings.loopType = 'queue';
+            break;
+          case 'queue':
+            guildsettings.loopType = null;
+            break;
+        }
+        setGuildSettings(msg.guild.id, guildsettings);
+        successMessage(msg.channel, `Set loop to ${guildsettings.loopType ? guildsettings.loopType.toUpperCase() : 'NONE'}.`);
+      } else {
+        switch(args[1]) {
+          case 'none':
+            guildsettings.loopType = null;
+            break;
+          case 'song':
+            guildsettings.loopType = 'song';
+            break;
+          case 'queue':
+            guildsettings.loopType = 'queue';
+            break;
+        }
+        setGuildSettings(msg.guild.id, guildsettings);
+        successMessage(msg.channel, `Set loop to ${guildsettings.loopType ? guildsettings.loopType.toUpperCase() : 'NONE'}.`);
+      }
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'invite')) {
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}invite\x1b[0m.`);
+      msg.channel.send( { embed: {
+        title: "Invite Vapor",
+        color: "0x" + msg.guild.me.displayHexColor.substring(1),
+        author: {
+            name: msg.author.tag,
+            icon_url: msg.author.avatarURL()
+        },
+        thumbnail: {
+            url: client.user.avatarURL()
+        },
+        description: "[Click Here](http://discord.com/oauth2/authorize?client_id=" + client.user.id + "&scope=bot&permissions=8) to invite Vapor to your server."
+      } } );
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'lyrics')) {
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix + 'lyrics'}\x1b[0m.`);
+      let args = msg.content.split(' ');
+      if(args.length < 2) return errorMessage(msg.channel, 'Usage: ' + prefix + 'lyrics <Query>');
+      else {
+        args.shift();
+        let query = args.join(' ');
+        az.getLyric(query.charAt(0).toUpperCase() + query.substring(1)).then(ly => {
+          if(ly.join(' ').length < 2048) {
+            msg.channel.send({ embed: {
+              title: "Lyrics:",
+              color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
+              author: {
+                name: msg.author.tag,
+                icon_url: msg.author.avatarURL()
+              },
+              thumbnail: {
+                url: client.user.avatarURL()
+              },
+              description: ly.join('\n')
+            } });
+          } else {
+            let lyrics = splitText(ly.join('\n'), 2048);
+            msg.channel.send({ embed: {
+              title: "Lyrics:",
+              color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
+              author: {
+                  name: msg.author.tag,
+                  icon_url: msg.author.avatarURL()
+              },
+              thumbnail: {
+                  url: client.user.avatarURL()
+              },
+              description: lyrics[0]
+            } });
+            lyrics.shift();
+            for(var i=0; i < lyrics.length; i++) {
+              if(lyrics.length -1 == i) {
+                msg.channel.send({ embed: {
+                  color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
+                  footer: {
+                    icon_url: msg.author.avatarURL(),
+                    text: "Requested by " + msg.author.tag
+                  },
+                  description: lyrics[i]
+                } });
+              } else {
+                msg.channel.send({ embed: {
+                  color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
+                  description: lyrics[i]
+                } });
+              }
+            }
+          }
+        }) .catch(err => { errorMessage(msg.channel, 'Nothing found.'); });
+      } 
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'ping')) {
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix + 'ping'}\x1b[0m.`);
+      msg.channel.send({ embed: {
+        title: ":ping_pong: Bot Latency",
+        color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
+        description: `${Date.now() - msg.createdTimestamp} ms`,
+        fields: [
+          {
+              name: "API Latency:",
+              value: Math.round(client.ws.ping) + " ms"
+          }
+        ]
+      } })
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'nowplaying') || msg.content.toLowerCase().startsWith(prefix + 'np')) {
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix + 'nowplaying'}\x1b[0m.`);
+      if(!msg.guild.me.voice.connection) return errorMessage(msg.channel, 'I am not playing anything!');
+      if(!msg.guild.me.voice.connection.dispatcher) return errorMessage(msg.channel, 'I am not playing anything!');
+      let guildsettings = getGuildSettings(msg.guild.id);
+      let playTime = Math.round(msg.guild.me.voice.connection.dispatcher.totalStreamTime /1000);
+      ytdl.getInfo(guildsettings.musicQueue[guildsettings.nowPlaying].url) .then(vid => {
+        let videoLength = vid.videoDetails.lengthSeconds;
+        let guiMsg = "";
+        let percent = roundToNearest5(playTime/videoLength*100);
+        for(let i=0; i < 20; i++) {
+          let frag = percent/100*20;
+          if(frag == i) {
+            guiMsg += ":small_blue_diamond:";
+          } else {
+            guiMsg += "=";
+          }
+        }
+        let timings = [
+          {
+            s: Math.floor(playTime/60/60 % 1 *60 % 1 *60),
+            m: Math.floor(playTime/60/60 % 1 * 60),
+            h: Math.floor(playTime/60/60)
+          },
+          {
+            s: Math.floor(videoLength/60/60 % 1 *60 % 1 *60),
+            m: Math.floor(videoLength/60/60 % 1 *60),
+            h: Math.floor(videoLength/60/60)
+          }
+        ];
+        msg.channel.send({ embed: {
+          title: "Now Playing:",
+          description: "[" + guildsettings.musicQueue[guildsettings.nowPlaying].title + "](" + guildsettings.musicQueue[guildsettings.nowPlaying].url + ")",
+          fields: [
+            {
+                name: `${timings[0].h ? timings[0].h + ":" : ""}${timings[0].h && timings[0].m < 10 ? "0"+timings[0].m : timings[0].m}:${timings[0].s < 10 ? "0"+timings[0].s : timings[0].s} | ${timings[1].h ? timings[1].h + ":" : ""}${timings[1].h && timings[1].m < 10 ? "0"+timings[1].m : timings[1].m}:${timings[1].s}`,
+                value: guiMsg
+            }
+          ],
+          color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
+          footer: {
+            text: "Requested by " + msg.author.tag,
+            icon_url: msg.author.avatarURL()
+          }
+        } });
+      }) .catch(e => console.log(e));
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'play') || msg.content.toLowerCase().startsWith(prefix + 'p')) {
+      var guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
+      let args = msg.content.split(' ');
+      let query;
+      if(args[0] !== prefix+'play' && args[0] !== prefix+'p') return;
+      if(args.length < 2) {
+        if(!msg.guild.me.voice.channelID) return errorMessage(msg.channel, 'Usage: ' + prefix + 'play <Query>');
+        if(!msg.member.voice.channelID) return errorMessage(msg.channel, 'You are not in my voice channel!');
+        if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return errorMessage(msg.channel, 'You are not in my voice channel!');
+        if(!msg.guild.me.voice.connection) return errorMessage(msg.channel, 'An unknown error occured. If the bot is in a voice channel, please disconnect it using admin and try again.');
+        if(!msg.guild.me.voice.connection.dispatcher) return errorMessage(msg.channel, 'Usage: ' + prefix + 'play <Query>');
+        if(msg.guild.me.voice.connection.dispatcher.paused) {
+          msg.guild.me.voice.connection.dispatcher.resume();
+          successMessage(msg.channel, 'Resumed playback.');
+        }
+      }
+      let newArgs = args;
+      newArgs.splice(0, 1);
+      query = newArgs.join(' ');
+      if(!msg.guild.me.voice.connection) {
+        if(!msg.member.voice.channel) return errorMessage(msg.channel, 'You are not in a voice channel!');
+        msg.member.voice.channel.join() .then(c => {
+          c.voice.setSelfDeaf(true);
+          let guildsettings = getGuildSettings(msg.guild.id);
+          guildsettings.loopType = null;
+          setGuildSettings(msg.guild.id, guildsettings);
+          c.on('disconnect', () => {
+            musicBotAPI.resetQueue(msg.guild.id);
+          })
+        }) .catch(err => errorMessage(msg.channel, "ERROR: " + err));
+      } else {
+        if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return errorMessage(msg.channel, 'You are not in my voice channel!');
+      }
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}play\x1b[0m.`);
+      musicBotAPI.play(msg.channel, query, true);
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'queue') || msg.content.toLowerCase().startsWith(prefix + 'q')) {
+      //errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
+      let queue = musicBotAPI.fetchQueue(msg.guild.id);
+      let args = msg.content.toLowerCase().split(' ');
+      if(args[0] !== prefix+'queue' && args[0] !== prefix+'q') return;
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}queue\x1b[0m.`);
+      if(args.length > 1) {
+        if(args[1] == 'clear') {
+          let guildsettings = getGuildSettings(msg.guild.id);
+          if(!guildsettings.musicQueue) return;
+          guildsettings.musicQueue = [];
+          guildsettings.nowPlaying = null;
+          guildsettings.lastPlayed = null;
+          setGuildSettings(msg.guild.id, guildsettings);
+          return successMessage(msg.channel, 'Cleared the queue!');
+        }
+      }
+      if(queue) {
+        if(queue.length > 0) {
+          let queueFields = [];
+          for(var i=0; i<queue.length; i++) {
+            queueFields[queueFields.length] = {
+              name: "Position in queue: " + (i+1),
+              value: `${getGuildSettings(msg.guild.id).nowPlaying == i ? ":arrow_forward: " : ""}` + "[" + queue[i].title + "](" + queue[i].url + ")"
+            }
+          }
+          msg.channel.send({ embed: {
+            title: "Current Queue:",
+            color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
+            fields: queueFields,
+            footer: {
+              text: "Requested by " + msg.author.tag + " | Loop: " + (getGuildSettings(msg.guild.id).loopType ? getGuildSettings(msg.guild.id).loopType : "none"),
+              icon_url: msg.author.avatarURL()
+            }
+          } });
+        } else errorMessage(msg.channel, 'There is nothing in the queue!');
+      } else errorMessage(msg.channel, 'There is nothing in the queue!');
+    }
+    else if(msg.content.toLowerCase().startsWith(prefix + 'giveaway') || msg.content.toLowerCase().startsWith(prefix + 'g')) {
+      let args = msg.content.toLowerCase().split(' ');
+      if(args[0] !== prefix+'giveaway' && args[0] !== prefix+'g') return;
+      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}giveaway\x1b[0m.`);
+      let giveawayhelp = { embed: {
+        title: "Giveaway Help",
+        color: "0x" + msg.guild.me.displayHexColor.substring(1),
+        author: {
+            name: msg.author.tag,
+            icon_url: msg.author.avatarURL()
+        },
+        thumbnail: {
+            url: client.user.avatarURL()
+        },
+        fields: [
+            {
+                name: prefix + "g help",
+                value: "Displays this menu."
+            },
+            {
+                name: prefix + "g create",
+                value: "Create a giveaway."
+            },
+            {
+                name: prefix + "g list",
+                value: "List all giveaways."
+            },
+            {
+                name: prefix + "g reroll",
+                value: "Reroll giveaway."
+            },
+            {
+                name: prefix + "g remove",
+                value: "Remove giveaway."
+            }
+        ]
+      } };
+      if(args.length == 1) {
+        
+      } else {
+
+      }
     }
 });
 
@@ -1070,7 +1661,7 @@ function permissionDenied(channel, permission) {
 function successMessage(channel, message) {
   channel.send({embed: {
     title: message,
-    color: "0x00FF00"
+    color: `0x${channel.guild.me.displayHexColor.substring(1)}`
   }})
 }
 
@@ -1095,3 +1686,288 @@ if (BOT_CHANNEL == 0) {
 } else if (BOT_CHANNEL == 1) {
     client.login(JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).token);
 }
+
+
+function splitText(str, size) {
+
+  // Maximum allowed chunk size
+  let MAX_CHUNK_SIZE = size;
+  let chunks = new Array();
+  let current_chunk_position = 0;
+
+  while(current_chunk_position < str.length){
+
+      let current_substring = str.substr(current_chunk_position, MAX_CHUNK_SIZE);
+
+      let last_index = current_substring.lastIndexOf("\n") > 0 ? current_substring.lastIndexOf("\n") : MAX_CHUNK_SIZE;
+
+      let chunk = str.substr(current_chunk_position, last_index);
+      chunks.push(chunk);
+
+      current_chunk_position += last_index;
+  }
+
+  return chunks;
+}
+
+let execute = (msg, args, interaction) => {
+  let guildsettings;
+  let settings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
+  let cmd = msg;
+  args = args || null;
+  if(!interaction) {
+    guildsettings = getGuildSettings(msg.guild.id);
+    args = msg.content.toLowerCase().split(' ');
+    cmd = args[0].substring(guildsettings.prefix.length);
+    args.shift();
+  }
+  switch(cmd) {
+    case 'help':
+      if(args) {
+        switch((interaction ? args[0].value : args[0])) {
+          case 'moderation':
+          case 'mod':
+            if(interaction) client.sendInteractionEmbed({
+              title: "Vapor Help (Moderation)",
+              color: client.guilds.resolve(interaction.guild_id).me.displayColor,
+              fields: [
+                {
+                  name: "/ban",
+                  value: "Ban a user."
+                },
+                {
+                  name: "/unban",
+                  value: "Unban a user."
+                },
+                {
+                  name: "/kick",
+                  value: "Kick a user."
+                },
+                {
+                  name: "/autoban",
+                  value: "Set amount of warnings until a user gets banned."
+                },
+                {
+                  name: "/autokick",
+                  value: "Set amount of warnings until a user gets kicked."
+                },
+                {
+                  name: "/warn",
+                  value: "Warn a user."
+                },
+                {
+                  name: "/delwarn",
+                  value: "Remove a warning from a user."
+                },
+                {
+                  name: "/warnings | /warns",
+                  value: "View warnings of a user."
+                },
+                {
+                  name: "/purge",
+                  value: "Remove amount of messages specified."
+                },
+                {
+                  name: "/setstore",
+                  value: "Set server donation link."
+                },
+                {
+                  name: "/setprefix",
+                  value: "Set bot's prefix."
+                }
+              ]
+            }, interaction.id, interaction.token);
+            else msg.reply({ embed: {
+              title: "Vapor Help (Moderation)",
+              color: client.guilds.resolve(interaction.guild_id).me.displayColor,
+              fields: [
+                {
+                  name: guildsettings.prefix + "ban",
+                  value: "Ban a user."
+                },
+                {
+                  name: guildsettings.prefix + "unban",
+                  value: "Unban a user."
+                },
+                {
+                  name: guildsettings.prefix + "kick",
+                  value: "Kick a user."
+                },
+                {
+                  name: guildsettings.prefix + "autoban",
+                  value: "Set amount of warnings until a user gets banned."
+                },
+                {
+                  name: guildsettings.prefix + "/autokick",
+                  value: "Set amount of warnings until a user gets kicked."
+                },
+                {
+                  name: guildsettings.prefix + "warn",
+                  value: "Warn a user."
+                },
+                {
+                  name: guildsettings.prefix + "delwarn",
+                  value: "Remove a warning from a user."
+                },
+                {
+                  name: guildsettings.prefix + "warnings | " + guildsettings.prefix + "warns",
+                  value: "View warnings of a user."
+                },
+                {
+                  name: guildsettings.prefix + "purge",
+                  value: "Remove amount of messages specified."
+                },
+                {
+                  name: guildsettings.prefix + "setstore",
+                  value: "Set server donation link."
+                },
+                {
+                  name: guildsettings.prefix + "setprefix",
+                  value: "Set bot's prefix."
+                }
+              ]
+            } });
+            break;
+          case 'music':
+          case 'mus':
+            if(interaction) client.sendInteractionEmbed({
+              title: "Vapor Help (Music)",
+              color: client.guilds.resolve(interaction.guild_id).me.displayColor,
+              fields: [
+                {
+                  name: "/play",
+                  value: "Play a song."
+                }
+              ]
+            }, interaction.id, interaction.token);
+            else msg.reply({ embed: {
+              title: "Vapor Help (Music)",
+              color: client.guilds.resolve(interaction.guild_id).me.displayColor,
+              fields: [
+                {
+                  name: guildsettings.prefix + "play",
+                  value: "Play a song."
+                }
+              ]
+            } });
+            break;
+          case 'miscellaneous':
+          case 'misc':
+            break;
+        }
+      } else {
+        if(interaction != undefined) {
+          client.sendInteractionEmbed({
+            title: "Vapor Help",
+            color: client.guilds.resolve(interaction.guild_id).me.displayColor,
+            fields: [
+              {
+                  name: "/help moderation",
+                  value: "Shows moderation commands."
+              },
+              {
+                  name: "/help music",
+                  value: "Shows music commands."
+              },
+              {
+                  name: "/help miscellaneous",
+                  value: "Shows other commands not listed in any category."
+              }
+            ]
+          }, interaction.id, interaction.token);
+        } else msg.reply({ embed: {
+          title: "Vapor Help",
+          color: msg.guild.me.displayColor,
+          fields: [
+            {
+                name: guildsettings.prefix + "help moderation",
+                value: "Shows moderation commands."
+            },
+            {
+                name: guildsettings.prefix + "help music",
+                value: "Shows music commands."
+            },
+            {
+                name: guildsettings.prefix + "help miscellaneous",
+                value: "Shows other commands not listed in any category."
+            }
+          ]
+        } }) .catch(err => {});
+      }
+      break;
+    case 'setprefix':
+      break;
+    case 'ban':
+      break;
+    case 'unban':
+      break;
+    case 'kick':
+      break;
+    case 'warnings':
+    case 'warns':
+      break;
+    case 'warn':
+      break;
+    case 'delwarn':
+      break;
+    case 'autokick':
+      break;
+    case 'autoban':
+      break;
+    case 'store':
+      break;
+    case 'setstore':
+      break;
+    case 'purge':
+      break;
+    case 'info':
+      break;
+    case 'ping':
+      break;
+    case 'dev':
+      break;
+    case 'passwordprotect':
+      break;
+    case 'play':
+    case 'p':
+      break;
+    case 'queue':
+    case 'q':
+      break;
+    case 'stop':
+      break;
+    case 'pause':
+      break;
+    case 'disconnect':
+    case 'dc':
+      break;
+    case 'join':
+      break;
+    case 'nowplaying':
+    case 'np':
+      break;
+  }
+};
+
+function initSlashCommands(guild) {
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "help",
+      description: "Show Vapor help.",
+      options: [
+        {
+          type: 3,
+          name: "module",
+          choices: [{name: "moderation", value: "mod"}, {name: "music", value: "mus"}, {name: "miscellaneous", value: "misc"}],
+          required: false,
+          description: "What help module you would like to view."
+        }
+      ]
+    }
+  });
+}
+
+client.ws.on('INTERACTION_CREATE', i => {
+  if(i.data.options) execute(i.data.name, i.data.options, i);
+  else execute(i.data.name, undefined, i);
+});

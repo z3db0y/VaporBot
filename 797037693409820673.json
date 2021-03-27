@@ -12,5 +12,8 @@
   "warnings": [],
   "autokick": 0,
   "autoban": 0,
-  "musicQueue": []
+  "musicQueue": [],
+  "nowPlaying": null,
+  "lastPlayed": null,
+  "loopType": null
 }

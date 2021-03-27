@@ -39,8 +39,18 @@ class GuildAPI extends EventEmitter {
 
     updateConfig(guild) {
         let guildFilename = guild.id.toString() + ".json";
-        let settings = JSON.stringify(JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).defaultSettings, null, 2);
-        fs.writeFileSync(guildFilename, settings);
+        let settings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).defaultSettings;
+        if(fs.existsSync(guildFilename)) {
+            let guildsettings = JSON.parse(fs.readFileSync(guildFilename));
+            for(let key in settings) {
+                if(!guildsettings.hasOwnProperty(key)) {
+                    guildsettings[key] = settings[key];
+                }
+            }
+            fs.writeFileSync(guildFilename, JSON.stringify(guildsettings, null, 2));
+        } else {
+            fs.writeFileSync(guildFilename, JSON.stringify(settings, null, 2));
+        }
         console.log(`\x1b[35m[GuildManager]\x1b[0m Guild \x1b[32m${guild.name}\x1b[0m has been updated!`);
         this.emit('updateComplete', guild);
     }
