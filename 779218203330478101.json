@@ -1,5 +1,5 @@
 {
-  "prefix": "v!",
+  "prefix": ".",
   "logging": {
     "enabled": false,
     "logChannelId": null,
@@ -13,16 +13,20 @@
     {
       "user": "654036914126585896",
       "warns": [
-        " abusive language",
-        "muted and deafened in VC",
-        "earrape not pleasant you know",
-        "nasty joke",
-        "sotp",
-        "earrape",
-        "spam?",
-        "earrape",
-        "COMPLAINIG ABOUT WARNINGS",
-        "bad behaviour"
+        "stop breathing",
+        " stop spamming",
+        "multiple racial slurs",
+        "er multiple racial slurs against the government of chechnya",
+        "multiple war crimes against the province of chechnya",
+        "nigga",
+        "n word",
+        "<:lol:819897662282530816>",
+        "idk",
+        "idk",
+        "idk",
+        "idk",
+        "idk",
+        "idk"
       ]
     },
     {
@@ -48,21 +52,30 @@
     {
       "user": "611227008818610176",
       "warns": [
-        "No reason provided."
+        "listens to around the world"
       ]
+    },
+    {
+      "user": "769964997413175317",
+      "warns": [
+        "No reason provided.",
+        " no",
+        "  stop playing dress up with your sister, you don't have a girlfriend lets be honest.",
+        "  stop playing dress up with your sister, you don't have a girlfriend lets be honest.",
+        "shut up im having a good convo with aauyush"
+      ]
+    },
+    {
+      "user": "740167253491843094",
+      "warns": []
     }
   ],
   "autokick": 5,
   "autoban": 10,
-  "musicQueue": [
-    {
-      "url": "https://youtube.com/watch?v=NO4QAufvot8",
-      "title": "WildVibes, David Bulla & LionX - The One [FREE DOWNLOAD]"
-    }
-  ],
-  "nowPlaying": 0,
-  "lastPlayed": -1,
+  "musicQueue": [],
+  "nowPlaying": null,
+  "lastPlayed": null,
   "twentyFourSeven": 1,
-  "loopType": "song",
+  "loopType": null,
   "devRole": "808567334997458977"
 }

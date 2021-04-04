@@ -1,5 +1,5 @@
 {
-  "prefix": "v!",
+  "prefix": ".",
   "logging": {
     "enabled": false,
     "logChannelId": null,
@@ -9,12 +9,15 @@
   "rainbowRoles": [],
   "lastLoggedUpdate": null,
   "updateChannel": null,
-  "warnings": [],
+  "warnings": {
+    "740167253491843094": [],
+    "654236944821256193": []
+  },
   "autokick": 0,
   "autoban": 0,
   "musicQueue": [],
   "nowPlaying": null,
   "lastPlayed": null,
   "loopType": null,
-  "devRole": null
+  "devRole": "807166367249596426"
 }
