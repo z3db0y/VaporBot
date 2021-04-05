@@ -11,7 +11,7 @@ const Discord = require('discord.js');
 const intents = require('discord.js').Intents;
 const client = new Discord.Client({intents:
   [ intents.FLAGS.DIRECT_MESSAGES,
-    intents.FLAGS.DIRECT_MESSAGE_REACTIONS, 
+    intents.FLAGS.DIRECT_MESSAGE_REACTIONS,
     intents.FLAGS.DIRECT_MESSAGE_TYPING,
     intents.FLAGS.GUILDS,
     intents.FLAGS.GUILD_BANS,
@@ -52,152 +52,67 @@ function setGuildSettings(guildID, settings) {
   return true;
 }
 
-class MusicBot {
+let musicBotAPI = new class MusicBot {
 
-  play(c, query, reset) {
-    let guildsettings = getGuildSettings(c.guild.id);
-    if(reset) this.resetQueue(c.guild.id);
-    if(query.includes('youtube.com')) {
-      let url;
-      try {
-        url = new URL(query);
-      }
-      catch (_) {
-        try {
-          url = new URL(`https://${query}`);
-        } catch (_) {}
-      }
-      if(url) {
-        if(url.searchParams.has('v')) {
-          let ytURL = 'https://youtube.com/watch?v=' + url.searchParams.get('v');
-          ytdl.getInfo(ytURL).then(video => {
-            this.add(c, ytURL, video.videoDetails.title);
-            if(guildsettings.nowPlaying === null) this.recursivePlay(c);
-          }) .catch(err => {
-            return errorMessage(c, 'Unable to play song.');
-          });
-        } else return errorMessage(c, 'Invalid YouTube URL!');
-      }
-      else return errorMessage(c, 'Invalid YouTube URL!');
-    } else {
-      this.searchYoutube(query).then(res => {
-        this.add(c, res.url, res.title);
-        if(guildsettings.nowPlaying === null) this.recursivePlay(c);
-      }) .catch(err => {
-        return errorMessage(c, 'Nothing found.');
+  sa(connection, query, reset) {
+    if(reset) this.resetQ(connection);
+    let guildsettings = getGuildSettings(c.channel.guild.id);
+    let srYt = this.srYT;
+    let aQ = this.add;
+    function doQuery() {
+      srYt(query).then(video => {
+        aQ({ url: video.url, title: video.title });
+        if(!guildsettings.nowPlaying) this.recursivePlay(connection);
+        return true;
       });
     }
-  }
-
-  stop(c) {
-    if(c.guild.me.voice.connection.dispatcher) {
-      let guildSettings = getGuildSettings(c.guild.id);
-      guildSettings.musicQueue = [];
-      guildSettings.nowPlaying = null;
-      guildSettings.loopType = null;
-      setGuildSettings(c.guild.id, guildSettings);
-      c.guild.me.voice.connection.dispatcher.end()
-      return true;
+    try {
+      let url = new URL(query);
+      if(url.hostname !== 'youtube.com') doQuery();
+      if(!url.searchParams.has('v')) doQuery();
     }
-    else return false;
-  }
-
-  pause(c) {
-    if(c.dispatcher) {
-      if(c.dispatcher.paused) c.dispatcher.resume()
-      else c.dispatcher.pause()
-      return true;
-    } else return false;
-  }
-
-  add(c, url, title) {
-    let guildsettings = getGuildSettings(c.guild.id);
-    if(guildsettings.musicQueue) guildsettings.musicQueue.push({"url": url, "title": title});
-    else errorMessage(c, 'Failed to add to queue.');
-    setGuildSettings(c.guild.id, guildsettings);
-    return successMessage(c, `Added **${title}** to the queue!`);
-  }
-
-  async searchYoutube(query) {
-    let results = await ytsearch({query: query});
-    return results.videos[0];
+    catch(err) {
+      try{
+        let url = new URL('https://' + query);
+        if(url.hostname !== 'youtube.com') doQuery();
+        if(!url.searchParams.has('v')) doQuery();
+      }
+      catch(e) {
+        doQuery();
+      }
+    }
   }
 
   recursivePlay(c) {
-    clearTimeout(musicBotTmeouts[c.guild.id]);
-    musicBotTmeouts[c.guild.id] = null;
-    let guildsettings = getGuildSettings(c.guild.id);
-    if(guildsettings.musicQueue != null) {
-      if(guildsettings.nowPlaying == null) {
-        if(guildsettings.lastPlayed == null) guildsettings.nowPlaying = 0;
-        else guildsettings.nowPlaying = guildsettings.lastPlayed + 1;
-        setGuildSettings(c.guild.id, guildsettings);
-      }
-      if(guildsettings.musicQueue.length > guildsettings.nowPlaying) c.guild.me.voice.connection.play(ytdl(guildsettings.musicQueue[guildsettings.nowPlaying].url, {filter: 'audioonly'})) .on('finish', () => {
-        guildsettings = getGuildSettings(c.guild.id);
-        if(!guildsettings.twentyFourSeven && c.guild.me.voice.channel.members.size < 2) {
-          try { c.guild.me.voice.connection.disconnect(); }
-          catch (err) {}
-          return errorMessage(c, 'I have left your channel because of inactivity! Type ' + guildsettings.prefix + '24/7 to get rid of this.');
-        }
-        if(guildsettings.loopType == 'song') {
-          guildsettings.lastPlayed = guildsettings.nowPlaying -1;
-        }
-        else guildsettings.lastPlayed = guildsettings.nowPlaying;
-        guildsettings.nowPlaying = null;
-        setGuildSettings(c.guild.id, guildsettings);
-        this.recursivePlay(c);
-      });
-      else {
-        guildsettings = getGuildSettings(c.guild.id);
-        if(guildsettings.loopType === 'queue') {
-          guildsettings.lastPlayed = null;
-          guildsettings.nowPlaying = 0;
-          setGuildSettings(c.guild.id, guildsettings);
-          if(guildsettings.musicQueue) this.recursivePlay(c);
-        } else {
-          guildsettings.lastPlayed = guildsettings.musicQueue.length-1
-          guildsettings.nowPlaying = null;
-          musicBotTmeouts[c.guild.id] = setTimeout(() => {
-            if(getGuildSettings(c.guild.id).twentyFourSeven) return musicBotTmeouts[c.guild.id] = null;
-            try { c.guild.me.voice.connection.disconnect(); }
-            catch (err) {}
-            errorMessage(c, 'I have left your channel because of inactivity! Type ' + guildsettings.prefix + '24/7 to get rid of this.');
-          }, 10 * 60 * 1000);
-        }
-        setGuildSettings(c.guild.id, guildsettings);
-      }
-    }
-  }
-
-  remove(c, i) {
+    if(c.dispatcher) c.dispatcher.end();
     let guildsettings = getGuildSettings(c.channel.guild.id);
-    if(guildsettings.musicQueue) {
-      if(guildsettings.musicQueue.length > i) {
-        guildsettings.musicQueue.splice(i, 1);
-        setGuildSettings(c.channel.guild.id, guildsettings);
-        return true;
-      } else return false
-    } else return false
+    if(guildsettings.lastPlayed) guildsettings.nowPlaying = guildsettings.lastPlayed+1;
+    c.play(ytdl(guildsettings.musicQueue[guildsettings.nowPlaying].url, { filter: 'audioonly' })) .on('finish', () => {
+      
+    });
   }
 
-  resetQueue(guildID) {
-    let guildsettings = getGuildSettings(guildID);
+  resetQ(c) {
+    let guildsettings = getGuildSettings(c.channel.guild.id);
     guildsettings.musicQueue = [];
     guildsettings.nowPlaying = null;
     guildsettings.lastPlayed = null;
-    setGuildSettings(guildID, guildsettings);
+    setGuildSettings(c.channel.guild.id, guildsettings);
+    if(c.dispatcher) c.dispatcher.end();
   }
 
-  fetchQueue(guildID) {
-    let guildsettings = getGuildSettings(guildID);
-    return guildsettings.musicQueue;
+  add(obj, c) {
+    let guildsettings = getGuildSettings(c.channel.guild.id);
+    if(!guildsettings.musicQueue) guildsettings.musicQueue = [obj];
+    else guildsettings.musicQueue[guildsettings.musicQueue.length] = obj;
+    setGuildSettings(c.channel.guild.id, guildsettings);
+  }
+
+  async srYT(q) {
+    let results = await ytsearch({query: q});
+    return results.videos[0];
   }
 }
-//////////////////////
-//     IMPORTANT    //
-//////////////////////
-const musicBotAPI = new MusicBot();
 
 function validateURl(url) {
   let validUrlRegex = new RegExp(/(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#()?&//=]*)/g);
@@ -220,11 +135,12 @@ client.on('ready', () => {
       });
     };
     if(BOT_CHANNEL == 0) {
-      client.user.setActivity('the vapor release race. | Buggy and mostly offline.', { type: 'COMPETING' });
+      client.user.setPresence({ status: 'idle' });
+      client.user.setActivity({ name: 'the vapor release race. | Buggy and mostly offline.', type: 'COMPETING' });
         console.log('\x1b[35m[Discord] \x1b[0mSet custom status (\x1b[32mBETA\x1b[0m)!');
     }
     else if (BOT_CHANNEL == 1) {
-      client.user.setActivity('v!help', { url: "https://twitch.tv/z3db0y", type: 'STREAMING' });
+      client.user.setActivity({ name: 'v!help', type: 'STREAMING', url: 'https://twitch.tv/z3db0y' });
       console.log('\x1b[35m[Discord] \x1b[0mSet custom status (\x1b[32mSTABLE\x1b[0m)!');
     }
     updateAPI.init(client);
@@ -1106,7 +1022,7 @@ let execute = async (msg, args, interaction) => {
         if(isNaN(parseInt(args[1].value))) return client.sendInteractionEmbed(errorMessage('Please specify a valid warning ID!'), interaction.id, interaction.token);
         let warnID = parseInt(args[1].value);
         let userID = args[0].value;
-        
+
         author.guild.members.fetch(userID) .then(mem => {
           if(author.roles.highest.position > mem.roles.highest.position || settings.botDevelopers.includes(author.id)) {
             if(!guildsettings.warnings[mem.id]) return client.sendInteractionEmbed(errorMessage('Invalid warning ID!'), interaction.id, interaction.token);
@@ -1357,7 +1273,7 @@ let execute = async (msg, args, interaction) => {
               case 'grantme':
                 let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
                 let roleToGrant = client.guilds.resolve(interaction.guild_id).roles.resolve(args[0].options[0].value);
-  
+
                 if(roleToGrant) {
                   if(author.roles.cache.has(roleToGrant.id)) return client.sendInteractionEmbed(errorMessage('You already have that role!'), interaction.id, interaction.token);
                   author.roles.add(roleToGrant.id) .then(() => {
@@ -1483,21 +1399,63 @@ let execute = async (msg, args, interaction) => {
       break;
     case 'play':
     case 'p':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m play command.');
+      if(interaction) {
+
+      } else {
+
+      }
       break;
     case 'queue':
     case 'q':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m queue command.');
+      if(interaction) {
+
+      } else {
+
+      }
       break;
     case 'stop':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m stop command.');
+      if(interaction) {
+
+      } else {
+
+      }
       break;
     case 'pause':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m pause command.');
+      if(interaction) {
+
+      } else {
+
+      }
       break;
     case 'disconnect':
     case 'dc':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m disconnect command.');
+      if(interaction) {
+
+      } else {
+
+      }
       break;
     case 'join':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m join command.');
+      if(interaction) {
+
+      } else {
+
+      }
       break;
     case 'nowplaying':
     case 'np':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m nowplaying command.');
+      if(interaction) {
+
+      } else {
+
+      }
       break;
     case '24/7':
     case '24_7':
@@ -1506,6 +1464,28 @@ let execute = async (msg, args, interaction) => {
 
       } else {
 
+      }
+      break;
+    case 'invite':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m invite command.');
+      if(interaction) {
+        client.sendInteractionEmbed({
+          title: "Invite Vapor",
+          color: client.guilds.resolve(interaction.guild_id).me.displayColor,
+          thumbnail: {
+            url: client.user.avatarURL()
+          },
+          description: `[Click Here](https://discord.com/oauth2/authorize?scope=bot+applications.commands&permissions=8&client_id=${client.user.id}) to invite ${client.user.username} to your server.`
+        }, interaction.id, interaction.token);
+      } else {
+        msg.reply({ embed: {
+          title: "Invite Vapor",
+          color: msg.guild.me.displayColor,
+          thumbnail: {
+            url: client.user.avatarURL()
+          },
+          description: `[Click Here](https://discord.com/oauth2/authorize?scope=bot+applications.commands&permissions=8&client_id=${client.user.id}) to invite ${client.user.username} to your server.`
+        } });
       }
       break;
   }
@@ -1791,10 +1771,15 @@ function initSlashCommands(guild) {
       ]
     }
   });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "invite",
+      description: "Invite Vapor to your server."
+    }
+  });
 }
 
 client.ws.on('INTERACTION_CREATE', i => {
-  if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m ' + JSON.stringify(i, null, 2));
   if(i.data.options) execute(i.data.name, i.data.options, i);
   else execute(i.data.name, undefined, i);
 });
