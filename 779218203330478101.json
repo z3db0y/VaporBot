@@ -72,15 +72,10 @@
   ],
   "autokick": 5,
   "autoban": 10,
-  "musicQueue": [
-    {
-      "url": "https://youtube.com/watch?v=CjMGDBDDvCY",
-      "title": "Northmane - Sandy Freaks (Spongebob Rap Remix)"
-    }
-  ],
-  "nowPlaying": 0,
-  "lastPlayed": -1,
+  "musicQueue": [],
+  "nowPlaying": null,
+  "lastPlayed": null,
   "twentyFourSeven": 1,
-  "loopType": "song",
+  "loopType": null,
   "devRole": "808567334997458977"
 }
