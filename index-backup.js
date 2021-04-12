@@ -2,7 +2,7 @@
 
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
-let musicBotTmeouts = {};
+let conMap = new Map();
 
 const BOT_CHANNEL = botChannels.BETA;
 
@@ -27,17 +27,16 @@ const client = new Discord.Client({intents:
   ]});
 //const client = new Discord.Client({ws: {intents: ['DIRECT_MESSAGES', 'DIRECT_MESSAGE_REACTIONS', 'DIRECT_MESSAGE_TYPING', 'GUILDS', 'GUILD_BANS', 'GUILD_EMOJIS', 'GUILD_INTEGRATIONS', 'GUILD_INVITES', 'GUILD_MEMBERS', 'GUILD_MESSAGES', 'GUILD_MESSAGE_REACTIONS', 'GUILD_MESSAGE_TYPING', 'GUILD_VOICE_STATES', 'GUILD_WEBHOOKS']}});
 const fs = require('fs');
+const cheerio = require('cheerio');
+const request = require('request');
+const ytsr = require('ytsr');
+const process = require('process');
 const GuildAPI = require('./guildAPI');
 const guildAPI = new GuildAPI.GuildAPI();
-const { exit, emit } = require('process');
-const RainbowRoleAPI = require('./rainbowRoleAPI');
-const rainbowRoleAPI = new RainbowRoleAPI.RainbowRole();
 const premiumAPI = require('./premiumAPI');
-//const musicBotAPI = require('./musicBotAPI');
-const events = require('events');
-const developerEmitter = new events.EventEmitter();
 const ytdl = require('ytdl-core');
 const ytsearch = require('yt-search');
+const ytpl = require('ytpl');
 const az = require('azlyrics-scraper');
 const roundToNearest5 = x => Math.round(x/5)*5;
 // if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m ');
@@ -54,41 +53,78 @@ function setGuildSettings(guildID, settings) {
 
 let musicBotAPI = new class MusicBot {
 
-  sa(connection, query, reset) {
+  sa(connection, query, reset, moi) {
     if(reset) this.resetQ(connection);
-    let guildsettings = getGuildSettings(c.channel.guild.id);
+    let guildsettings = getGuildSettings(connection.channel.guild.id);
     let srYt = this.srYT;
     let aQ = this.add;
-    function doQuery() {
-      srYt(query).then(video => {
-        aQ({ url: video.url, title: video.title });
-        if(!guildsettings.nowPlaying) this.recursivePlay(connection);
-        return true;
+    let rP = this.recursivePlay;
+    async function doQuery() {
+      await srYt(query).then(video => {
+        aQ({ url: video.url, title: video.title }, connection);
+        if(!guildsettings.nowPlaying) rP(connection);
+        if(moi.token) client.editInteraction( successMessage('Now playing: ' + video.title, connection.channel.guild.me.displayColor), moi.id, moi.token );
+        else moi.reply({ embed: successMessage('Now playing: ' + video.title, msg.guild.me.displayColor) });
+      }) .catch(err => {
+        if(moi.token) client.editInteraction( errorMessage('Nothing found.'), moi.id, moi.token );
+        else moi.reply({ embed: errorMessage('Nothing found.') });
+      });
+    }
+    async function doURL(u) {
+      await ytdl.getInfo(u).then(info => {
+        aQ({ url: u, title: info.videoDetails.title}, connection);
+        if(!guildsettings.nowPlaying) rP(connection);
+        if(moi.token) client.editInteraction( successMessage('Now playing: ' + info.videoDetails.title, connection.channel.guild.me.displayColor), moi.id, moi.token );
+        else moi.reply({ embed: successMessage('Now playing: ' + info.videoDetails.title, msg.guild.me.displayColor) });
+      }) .catch(err => {
+        if(moi.token) client.editInteraction( errorMessage('Unable to play song.'), moi.id, moi.token );
+        else moi.reply({ embed: errorMessage('Unable to play song.') });
       });
     }
     try {
       let url = new URL(query);
-      if(url.hostname !== 'youtube.com') doQuery();
-      if(!url.searchParams.has('v')) doQuery();
+      if(!url.hostname.includes('youtube.com')) return doQuery();
+      if(!url.searchParams.has('v')) return doQuery();
+      return doURL('https://youtube.com/watch?v=' + url.searchParams.get('v'));
     }
     catch(err) {
       try{
         let url = new URL('https://' + query);
-        if(url.hostname !== 'youtube.com') doQuery();
-        if(!url.searchParams.has('v')) doQuery();
+        if(!url.hostname.includes('youtube.com')) return doQuery();
+        if(!url.searchParams.has('v')) return doQuery();
+        return doURL('https://youtube.com/watch?v=' + url.searchParams.get('v'));
       }
       catch(e) {
-        doQuery();
+        return doQuery();
       }
     }
   }
 
   recursivePlay(c) {
-    if(c.dispatcher) c.dispatcher.end();
     let guildsettings = getGuildSettings(c.channel.guild.id);
     if(guildsettings.lastPlayed) guildsettings.nowPlaying = guildsettings.lastPlayed+1;
+    else guildsettings.nowPlaying = 0
     c.play(ytdl(guildsettings.musicQueue[guildsettings.nowPlaying].url, { filter: 'audioonly' })) .on('finish', () => {
-      
+      guildsettings = getGuildSettings(c.channel.guild.id);
+
+      if(true) { // If the only user in VC is Vapor, Set inactivity.
+        // Inactivity Timeout Logic Here.
+      }
+
+      if(guildsettings.loopType == 'song') {
+        guildsettings.lastPlayed = guildsettings.nowPlaying-1;
+        setGuildSettings(c.channel.guild.id, guildsettings);
+        this.recursivePlay(c);
+      }
+      if(guildsettings.nowPlaying == guildsettings.musicQueue.length-1) {
+        if(guildsettings.loopType == 'queue') {
+          guildsettings.lastPlayed = -1;
+          setGuildSettings(c.channel.guild.id, guildsettings);
+          this.recursivePlay(c);
+        } else {
+          // Inactivity Timeout Logic Here.
+        }
+      }
     });
   }
 
@@ -108,9 +144,58 @@ let musicBotAPI = new class MusicBot {
     setGuildSettings(c.channel.guild.id, guildsettings);
   }
 
+  rem(i, c) {
+    let guildsettings = getGuildSettings(c.channel.guild.id);
+    if(!guildsettings.musicQueue) return;
+    if(!guildsettings.musicQueue[i]) return;
+    guildsettings.splice(i, 1);
+    setGuildSettings(c.channel.guild.id, guildsettings);
+  }
+
   async srYT(q) {
-    let results = await ytsearch({query: q});
-    return results.videos[0];
+    //let res = await ytsr(q);
+    //return res.items.filter(x => x.type === 'video')[0];
+    let res = await ytsearch({ query: q });
+    return res.videos[0];
+  }
+
+  /*async rPl(id) {
+    let res = await ytpl(id);
+    
+  }*/
+
+  getLyrics(q) {
+    request(`https://api.genius.com/search?q=${encodeURIComponent(q)}`, { headers: { 'Authorization': `Bearer ${JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).lyricsToken}` } }, (err, res) => {
+      if(err) return undefined;
+      try {
+        let json = JSON.parse(res.body);
+        let url = undefined;
+        for(let item in json.response.hits) {
+          if(json.response.hits[item].result.full_title.toLowerCase().includes(q.toLowerCase())) return url = `https://genius.com/${json.response.hits[item].result.path}`;
+        }
+        if(!url) return
+        request(url, null, (err, res1) => {
+          if(err) return undefined;
+          let $ = cheerio.load(res1.body);
+          if($(".song_body-lyrics p").text()) {
+            return $(".song-body-lyrics p").text();
+          } else return undefined;
+        });
+      } catch(e) {
+        return undefined;
+      }
+    });
+  }
+
+  terminateAll() {
+    for(let i in conMap) {
+      let con = conMap[i];
+      con.channel.leave();
+    }
+  }
+
+  handleDisconnect(c) {
+    this.resetQ(c);
   }
 }
 
@@ -134,12 +219,28 @@ client.on('ready', () => {
         }
       });
     };
+    client.editInteraction = (embed, interaction_id, interaction_token) => {
+      client.api.webhooks(client.application.id)(interaction_token).messages['@original'].patch({      
+        type: 4,
+        data: {
+          embeds: [embed]
+        }
+      });
+    };
+    client.sendDefer = (interaction_id, interaction_token) => {
+      client.api.interactions(interaction_id, interaction_token).callback.post({
+        data: {
+          type: 5
+        }
+      });
+    };
     if(BOT_CHANNEL == 0) {
       client.user.setPresence({ status: 'idle' });
       client.user.setActivity({ name: 'the vapor release race. | Buggy and mostly offline.', type: 'COMPETING' });
         console.log('\x1b[35m[Discord] \x1b[0mSet custom status (\x1b[32mBETA\x1b[0m)!');
     }
     else if (BOT_CHANNEL == 1) {
+      client.user.setPresence({ status: 'dnd' });
       client.user.setActivity({ name: 'v!help', type: 'STREAMING', url: 'https://twitch.tv/z3db0y' });
       console.log('\x1b[35m[Discord] \x1b[0mSet custom status (\x1b[32mSTABLE\x1b[0m)!');
     }
@@ -149,7 +250,6 @@ client.on('ready', () => {
         initSlashCommands(guild);
         let guildsettings = JSON.parse(fs.readFileSync(`${guild.id}.json`));
         guildAPI.initialiseGuild(guild);
-        rainbowRoleAPI.runRainbowRole(client, guild.id);
         botDevelopers.forEach(dev => {
           guild.members.fetch(dev) .then(user => {
             if(guildsettings.devRole) user.roles.add(guildsettings.devRole, "Vapor Developer automatical grant.") .catch(err => {});
@@ -183,63 +283,24 @@ client.on('guildMemberRemove', (u) => {
   if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m guildMemberRemove event.');
 });
 
+//-------------
+// HANDLE EXIT
+//-------------
+
+process.on('SIGINT', () => process.exit(2));
+process.on('uncaughtException', console.log);
+process.on('exit', () => {
+  // Handle exit here.
+  musicBotAPI.terminateAll();
+  client.destroy();
+});
+
+//------------------
+// IMPORTANT EVENT
+//------------------
+
 client.on('message', async (msg) => {
-    if(!msg.member.user.bot) execute(msg);
-});
-
-developerEmitter.on('devRemoved', (userID) => {
-  client.guilds.cache.forEach(g => {
-    let userResolvable = g.members.fetch(userID) .catch(err => {});
-    let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
-    if(userResolvable && guildsettings.devRole) {
-      userResolvable.then(user => {
-        user.roles.remove(guildsettings.devRole, "Vapor Developer automatical removal.");
-      });
-    }
-  });
-});
-
-developerEmitter.on('devAdded', (userID) => {
-  client.guilds.cache.forEach(g => {
-    let userResolvable = g.members.fetch(userID) .catch(err => {});
-    let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
-    if(userResolvable && guildsettings.devRole) {
-      userResolvable.then(user => {
-        user.roles.add(guildsettings.devRole, "Vapor Developer automatical grant.");
-      });
-    }
-  });
-});
-
-developerEmitter.on('devRoleUpdated', (guildID, role, oldRole) => {
-  let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
-  client.guilds.fetch(guildID).then(guild => {
-    if(oldRole) {
-      botDevelopers.forEach(dev => {
-        guild.members.fetch(dev) .then(user => {
-          user.roles.remove(oldRole) .catch(err => {});
-          user.roles.add(role, "Vapor Developer automatical grant.") .catch(err => {});
-        }) .catch(err => {});
-      });
-    } else {
-      botDevelopers.forEach(dev => {
-        guild.members.fetch(dev) .then(user => {
-          user.roles.add(role, "Vapor Developer automatical grant.") .catch(err => {});
-        }) .catch(err => {});
-      });
-    }
-  }) .catch(err => {});
-});
-
-developerEmitter.on('devRoleRemoved', (guildID, devRoleID) => {
-  let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
-  client.guilds.fetch(guildID) .then(guild => {
-    botDevelopers.forEach(dev => {
-      guild.members.fetch(dev) .then(member => {
-        member.roles.remove(devRoleID) .catch(err => {});
-      }) .catch(err => {});
-    });
-  }) .catch(err => {});
+    if(!msg.member.user.bot && msg.guild) execute(msg);
 });
 
 function permissionDeniedMsg(permission) {
@@ -620,7 +681,7 @@ let execute = async (msg, args, interaction) => {
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m setprefix command.');
       if(interaction) {
         let member = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
-        if(!member.hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(member.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+        if(!member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(member.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
         let newPrefix = args[0].value;
         if(newPrefix.startsWith('/')) return client.sendInteractionEmbed(errorMessage('Prefix cannot start with **"/"**!', client.guilds.resolve(interaction.guild_id).me.displayColor), interaction.id, interaction.token);
         guildsettings.prefix = newPrefix;
@@ -628,7 +689,7 @@ let execute = async (msg, args, interaction) => {
         if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m prefix updated: ' + newPrefix);
         client.sendInteractionEmbed(successMessage('Prefix set to ' + newPrefix, client.guilds.resolve(interaction.guild_id).me.displayColor), interaction.id, interaction.token);
       } else {
-        if(!msg.member.hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.member.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.member.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
         if(!args) return msg.reply({ embed: errorMessage('Usage: ' + guildsettings.prefix + 'setprefix <prefix>') });
         if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m args exist.');
         let newPrefix = args[0];
@@ -647,7 +708,7 @@ let execute = async (msg, args, interaction) => {
         if(args[1]) reason = args[1].value;
         else reason = `Banned by ${author.user.tag}`;
         client.guilds.resolve(interaction.guild_id).members.fetch(args[0].value) .then (userToBan => {
-          if(!author.hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+          if(!author.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
           if(userToBan.user.tag == author.user.tag) return client.sendInteractionEmbed(errorMessage('You cannot ban yourself!'), interaction.id, interaction.token);
           if(userToBan.user.tag == client.user.tag) return client.sendInteractionEmbed(errorMessage('I cannot ban myself!'), interaction.id, interaction.token);
 
@@ -671,7 +732,7 @@ let execute = async (msg, args, interaction) => {
           });
         });
       } else {
-        if(!msg.member.hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
         if(args) {
           let reason;
           if(args.length > 1) {
@@ -734,7 +795,7 @@ let execute = async (msg, args, interaction) => {
     case 'unban':
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m unban command.');
       if(interaction) {
-        if(!client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id).hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(interaction.member.user.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+        if(!client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id).permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(interaction.member.user.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
         let reason;
         if(args[1]) reason = args[1].value;
         else reason = `Unbanned by ${interaction.member.user.username}#${interaction.member.user.discriminator}`;
@@ -752,7 +813,7 @@ let execute = async (msg, args, interaction) => {
           }
         });
       } else {
-        if(!msg.member.hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
         if(args) {
           let reason;
           if(args[1]) {
@@ -803,7 +864,7 @@ let execute = async (msg, args, interaction) => {
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m kick command.');
       if(interaction) {
         let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
-        if(!author.hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+        if(!author.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
         let reason;
         if(args[1]) reason = args[1].value
         else reason = `Kicked by ${author.user.tag}`;
@@ -819,7 +880,7 @@ let execute = async (msg, args, interaction) => {
           } else return msg.reply({ embed: errorMessage('You do not have permission to kick this user!') });
         });
       } else {
-        if(!msg.member.hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
         if(args) {
           let reason;
           if(args[1]) reason = args.slice(1).join(' ');
@@ -870,7 +931,7 @@ let execute = async (msg, args, interaction) => {
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m warnings command.');
       if(interaction) {
         let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
-        if(!author.hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+        if(!author.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
         let warningsFields = [];
         if(guildsettings.warnings[args[0].value]) {
           let userWarnings = guildsettings.warnings[args[0].value];
@@ -896,7 +957,7 @@ let execute = async (msg, args, interaction) => {
           });
         } else return client.sendInteractionEmbed(errorMessage('This user has no warnings!'), interaction.id, interaction.token);
       } else {
-        if(!msg.member.hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
         if(args) {
           let userID;
           if(/^<@/.test(args[0])) {
@@ -940,7 +1001,7 @@ let execute = async (msg, args, interaction) => {
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m warn command.');
       if(interaction) {
         let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
-        if(!author.hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+        if(!author.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
 
         author.guild.members.fetch(args[0].value) .then(userToWarn => {
           if(author.roles.highest.position > userToWarn.roles.highest.position || settings.botDevelopers.includes(author.id)) {
@@ -971,7 +1032,7 @@ let execute = async (msg, args, interaction) => {
           else client.sendInteractionEmbed(errorMessage(`Failed to warn user:\n${err.message}`), interaction.id, interaction.token);
         });
       } else {
-        if(!msg.member.hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
 
         if(args) {
           let userID;
@@ -1017,7 +1078,7 @@ let execute = async (msg, args, interaction) => {
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m delwarn command.');
       if(interaction) {
         let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
-        if(!author.hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+        if(!author.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
 
         if(isNaN(parseInt(args[1].value))) return client.sendInteractionEmbed(errorMessage('Please specify a valid warning ID!'), interaction.id, interaction.token);
         let warnID = parseInt(args[1].value);
@@ -1037,7 +1098,7 @@ let execute = async (msg, args, interaction) => {
           else client.sendInteractionEmbed(errorMessage(`Failed to remove warning:\n${err.message}`), interaction.id, interaction.token);
         });
       } else {
-        if(!msg.member.hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.member.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.member.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
         if(args) {
           if(!args[1]) return msg.reply({ embed: errorMessage('Please specify a warning ID!') });
           if(isNaN(parseInt(args[1]))) return msg.reply({ embed: errorMessage('Please specify a warning ID!') });
@@ -1070,7 +1131,7 @@ let execute = async (msg, args, interaction) => {
       console.log('\x1b[31m[DEBUG]\x1b[0m autokick command.');
       if(interaction) {
         let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
-        if(!author.hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+        if(!author.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
         let amount = parseInt(args[0].value);
         if(amount > 100) amount = 100
         else if (amount < 0) amount = 0
@@ -1078,7 +1139,7 @@ let execute = async (msg, args, interaction) => {
         setGuildSettings(author.guild.id, guildsettings);
         client.sendInteractionEmbed(successMessage('Set warnings until kick to ' + amount + '!' + (amount == 0 ? ' (none)' : ''), author.guild.me.displayColor), interaction.id, interaction.token);
       } else {
-        if(!msg.member.hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
         if(args) {
           if(isNaN(parseInt(args[0]))) return msg.reply({ embed: errorMessage('Please specify amount of warnings!') });
           let amount = parseInt(args[0]);
@@ -1094,7 +1155,7 @@ let execute = async (msg, args, interaction) => {
       console.log('\x1b[31m[DEBUG]\x1b[0m autoban command.');
       if(interaction) {
         let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
-        if(!author.hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+        if(!author.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
         let amount = parseInt(args[0].value);
         if(amount > 100) amount = 100
         else if (amount < 0) amount = 0
@@ -1102,7 +1163,7 @@ let execute = async (msg, args, interaction) => {
         setGuildSettings(author.guild.id, guildsettings);
         client.sendInteractionEmbed(successMessage('Set warnings until ban to ' + amount + '!' + (amount == 0 ? ' (none)' : ''), author.guild.me.displayColor), interaction.id, interaction.token);
       } else {
-        if(!msg.member.hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
         if(args) {
           if(isNaN(parseInt(args[0]))) return msg.reply({ embed: errorMessage('Please specify amount of warnings!') });
           let amount = parseInt(args[0]);
@@ -1122,14 +1183,14 @@ let execute = async (msg, args, interaction) => {
       console.log('\x1b[31m[DEBUG]\x1b[0m purge command.');
       if(interaction) {
         let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
-        if(!author.hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+        if(!author.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
         let amount = parseInt(args[0].value);
         if(amount > 100) return client.sendInteractionEmbed(errorMessage('You cannot delete more than 100 messages at once!'), interaction.id, interaction.token);
         else if(amount < 2) return client.sendInteractionEmbed(errorMessage('You cannot delete less than 2 messages with this command!'), interaction.id, interaction.token);
 
         author.guild.channels.resolve(interaction.channel_id).bulkDelete(amount) .then(() => client.sendInteractionEmbed(successMessage('Successfully deleted ' + amount + ' messages!', author.guild.me.displayColor), interaction.id, interaction.token)) .catch(err => client.sendInteractionEmbed(errorMessage('Failed to delete messages!\nThe bot cannot delete messages more than two weeks old.'), interaction.id, interaction.token))
       } else {
-        if(!msg.member.hasPermission('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
         if(args) {
           if(isNaN(parseInt(args[0]))) return msg.reply({ embed: errorMessage('Please specify how many messages to remove!') });
           let amount = parseInt(args[0]);
@@ -1401,7 +1462,20 @@ let execute = async (msg, args, interaction) => {
     case 'p':
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m play command.');
       if(interaction) {
-
+        let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        let guildsettings = getGuildSettings(author.guild.id);
+        if(!author.guild.me.voice.channelID) {
+          if(!author.voice.channelID) return client.sendInteractionEmbed(errorMessage('You are not in a voice channel!'), interaction.id, interaction.token);
+          await author.voice.channel.join() .then(con => {
+            conMap[author.guild.id] = con;
+            con.on('disconnect', () => musicBotAPI.handleDisconnect(con));
+          })
+        }
+        if(author.voice.channelID !== author.guild.me.voice.channelID) return client.sendInteractionEmbed(errorMessage('You are not in my voice channel!'), interaction.id, interaction.token);
+        if(author.voice.selfDeaf || author.voice.deaf) return client.sendInteractionEmbed(errorMessage('You cannot do this while deafened!'), interaction.id, interaction.token);
+        // Play music logic.
+        client.sendDefer(interaction.id, interaction.token);
+        musicBotAPI.sa(conMap[author.guild.id], args[0].value, true, interaction);
       } else {
 
       }
@@ -1465,6 +1539,9 @@ let execute = async (msg, args, interaction) => {
       } else {
 
       }
+      break;
+    case 'lyrics':
+      console.log(musicBotAPI.getLyrics(args.slice(1).join(' ')));
       break;
     case 'invite':
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m invite command.');
@@ -1775,6 +1852,20 @@ function initSlashCommands(guild) {
     data: {
       name: "invite",
       description: "Invite Vapor to your server."
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "play",
+      description: "Play a song.",
+      options: [
+        {
+          type: 3,
+          name: "query",
+          description: "Song to play.",
+          required: true
+        }
+      ]
     }
   });
 }

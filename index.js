@@ -8,7 +8,23 @@ const BOT_CHANNEL = botChannels.STABLE;
 
 require('dotenv').config();
 const Discord = require('discord.js');
-const client = new Discord.Client({ws: {intents: ['DIRECT_MESSAGES', 'DIRECT_MESSAGE_REACTIONS', 'DIRECT_MESSAGE_TYPING', 'GUILDS', 'GUILD_BANS', 'GUILD_EMOJIS', 'GUILD_INTEGRATIONS', 'GUILD_INVITES', 'GUILD_MEMBERS', 'GUILD_MESSAGES', 'GUILD_MESSAGE_REACTIONS', 'GUILD_MESSAGE_TYPING', 'GUILD_VOICE_STATES', 'GUILD_WEBHOOKS']}});
+const intents = require('discord.js').Intents;
+const client = new Discord.Client({intents:
+  [ intents.FLAGS.DIRECT_MESSAGES,
+    intents.FLAGS.DIRECT_MESSAGE_REACTIONS,
+    intents.FLAGS.DIRECT_MESSAGE_TYPING,
+    intents.FLAGS.GUILDS,
+    intents.FLAGS.GUILD_BANS,
+    intents.FLAGS.GUILD_EMOJIS,
+    intents.FLAGS.GUILD_INTEGRATIONS,
+    intents.FLAGS.GUILD_INVITES,
+    intents.FLAGS.GUILD_MEMBERS,
+    intents.FLAGS.GUILD_MESSAGES,
+    intents.FLAGS.GUILD_MESSAGE_REACTIONS,
+    intents.FLAGS.GUILD_MESSAGE_TYPING,
+    intents.FLAGS.GUILD_VOICE_STATES,
+    intents.FLAGS.GUILD_WEBHOOKS
+  ]});
 const fs = require('fs');
 const GuildAPI = require('./guildAPI');
 const guildAPI = new GuildAPI.GuildAPI();
@@ -189,16 +205,12 @@ function validateURl(url) {
 client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
     if(BOT_CHANNEL == 0) {
-      client.user.setPresence({activity: {type: "PLAYING", name: "Vapor Beta | Buggy and mostly offline"}, status: 'idle', afk: false})
-      .then(() => {
-        console.log('\x1b[35m[Discord] \x1b[0mSet custom status (\x1b[32mBETA\x1b[0m)!');
-      });
+      client.user.setPresence({activity: {type: "PLAYING", name: "Vapor Beta | Buggy and mostly offline"}, status: 'idle', afk: false});
+      console.log('\x1b[35m[Discord] \x1b[0mSet custom status (\x1b[32mBETA\x1b[0m)!');
     }
     else if (BOT_CHANNEL == 1) {
-      client.user.setPresence({activity: {type: "STREAMING", name: "Vapor | v!help", url: "https://twitch.tv/z3db0y"}, status: "online", afk: false})
-      .then(() => {
-        console.log('\x1b[35m[Discord] \x1b[0mSet custom status (\x1b[32mSTABLE\x1b[0m)!');
-      });
+      client.user.setPresence({activity: {type: "STREAMING", name: "Vapor | v!help", url: "https://twitch.tv/z3db0y"}, status: "online", afk: false});
+      console.log('\x1b[35m[Discord] \x1b[0mSet custom status (\x1b[32mSTABLE\x1b[0m)!');
     }
     updateAPI.init(client);
     let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
