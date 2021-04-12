@@ -1,6 +1,8 @@
 'use strict';
 
-const updateAPI = require('./updateAPI');
+const GuildAPI = require('./APIs/guildAPI');
+const guildAPI = new GuildAPI('guilds/');
+const updateAPI = require('./APIs/updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 let conMap = new Map();
 const process = require('process');
@@ -31,7 +33,7 @@ const fs = require('fs');
 const ytsr = require('ytsr');
 //const GuildAPI = require('./guildAPI');
 //const guildAPI = new GuildAPI.GuildAPI();
-const premiumAPI = require('./premiumAPI');
+const premiumAPI = require('./APIs/premiumAPI');
 const ytdl = require('ytdl-core');
 const ytsearch = require('yt-search');
 const ytpl = require('ytpl');
@@ -164,43 +166,6 @@ let musicBotAPI = new class MusicBot {
     this.resetQ(c);
   }
 }
-
-let guildAPI = new class GuildAPI {
-
-  construtor (guildDir) {
-    this.guildDir = guildDir;
-  }
-
-  getGuildSettings(guildID) {
-    if(fs.existsSync(`${this.guildDir}${guildID}.json`)) return JSON.parse(fs.readFileSync(`${this.guildDir}${guildID}.json`));
-    else return null
-  }
-  
-  setGuildSettings(guildID, settings) {
-    fs.writeFileSync(`${this.guildDir}${guildID}.json`, JSON.stringify(settings, null, 2));
-    return true;
-  }
-
-  initGuild(g) {
-    if(fs.existsSync(`${this.guildDir}${g.id}.json`)) return console.log(`\x1b[35m[GuildAPI] \x1b[32m${g.name} \x1b[0mready!`);
-    let defaultSettings = fs.readFileSync(process.env.CONFIG_PATH).defaultSettings;
-    this.setGuildSettings(g.id, defaultSettings);
-    console.log(`\x1b[35m[GuildAPI] \x1b[32m${g.name} \x1b[0mready!`);
-  }
-
-  repairGuild(g) {
-    let defaultSettings = JSON.stringify(fs.readFileSync(process.env.CONFIG_PATH).defaultSettings);
-    this.setGuildSettings(g.id, defaultSettings);
-    console.log(`\x1b[35m[GuildAPI] \x1b[32m${g.name} \x1b[0mrepaired!`);
-  }
-
-  removeGuild(g) {
-    if(fs.existsSync(`${this.guildDir}${g.id}.json`)) {
-      fs.unlinkSync(`${this.guildDir}${g.id}.json`);
-      console.log(`\x1b[35m[GuildAPI] \x1b[32m${g.name} \x1b[0mremoved!`);
-    }
-  }
-} ('guilds/');
 
 client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
