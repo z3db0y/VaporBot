@@ -1,2 +1,0 @@
-+ Finished setstore command
-+ Started working on music bot (behid the scenes)

@@ -1,2 +1,0 @@
-+ Music Update: Added commands.
-+ Added Music Bot API and started implementation.

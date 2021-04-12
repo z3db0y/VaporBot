@@ -1,2 +1,0 @@
-+ Added Beta Version of warning system.
-+ Added update logger.
