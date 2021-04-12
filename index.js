@@ -174,16 +174,33 @@ let guildAPI = new class GuildAPI {
   }
 
   getGuildSettings(guildID) {
-    return JSON.parse(fs.readFileSync(`guilds/${guildID}.json`));
+    if(fs.existsSync(`${this.guildDir}${guildID}.json`)) return JSON.parse(fs.readFileSync(`${this.guildDir}${guildID}.json`));
+    else return null
   }
   
   setGuildSettings(guildID, settings) {
-    fs.writeFileSync(`guilds/${guildID}.json`, JSON.stringify(settings, null, 2));
+    fs.writeFileSync(`${this.guildDir}${guildID}.json`, JSON.stringify(settings, null, 2));
     return true;
   }
 
-  initGuild(id) {
-    if(fs.existsSync(`${this.guildDir}${id}.json`)) return
+  initGuild(g) {
+    if(fs.existsSync(`${this.guildDir}${g.id}.json`)) return console.log(`\x1b[35m[GuildAPI] \x1b[32m${g.name} \x1b[0mready!`);
+    let defaultSettings = JSON.stringify(fs.readFileSync(process.env.CONFIG_PATH).defaultSettings);
+    this.setGuildSettings(g.id, defaultSettings);
+    console.log(`\x1b[35m[GuildAPI] \x1b[32m${g.name} \x1b[0mready!`);
+  }
+
+  repairGuild(g) {
+    let defaultSettings = JSON.stringify(fs.readFileSync(process.env.CONFIG_PATH).defaultSettings);
+    this.setGuildSettings(g.id, defaultSettings);
+    console.log(`\x1b[35m[GuildAPI] \x1b[32m${g.name} \x1b[0mrepaired!`);
+  }
+
+  removeGuild(g) {
+    if(fs.existsSync(`${this.guildDir}${g.id}.json`)) {
+      fs.unlinkSync(`${this.guildDir}${g.id}.json`);
+      console.log(`\x1b[35m[GuildAPI] \x1b[32m${g.name} \x1b[0mremoved!`);
+    }
   }
 } ('guilds/');
 
@@ -231,7 +248,7 @@ client.on('ready', () => {
     client.guilds.cache.forEach((guild) => {
         initSlashCommands(guild);
         let guildsettings = JSON.parse(fs.readFileSync(`${guild.id}.json`));
-        guildAPI.initialiseGuild(guild);
+        guildAPI.initGuild(guild);
         botDevelopers.forEach(dev => {
           guild.members.fetch(dev) .then(user => {
             if(guildsettings.devRole) user.roles.add(guildsettings.devRole, "Vapor Developer automatical grant.") .catch(err => {});
@@ -242,14 +259,13 @@ client.on('ready', () => {
 
 client.on('guildDelete', (guild) => {
     if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m guildDelete event.');
-    guildAPI.guildDeleted(guild);
+    guildAPI.removeGuild(guild);
 });
 
 client.on('guildCreate', (guild) => {
     if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m guildCreate event.');
     console.log(`\x1b[35m[GuildManager]\x1b[0m I have been added to \x1b[32m${guild.name}\x1b[0m!`);
-    guildAPI.initialiseGuild(guild);
-    rainbowRoleAPI.runRainbowRole(client, guild.id);
+    guildAPI.initGuild(guild);
 });
 
 client.on('guildMemberAdd', (member) => {
@@ -350,6 +366,10 @@ let execute = async (msg, args, interaction) => {
   interaction = interaction || null;
   if(!interaction) {
     guildsettings = guildAPI.getGuildSettings(msg.guild.id);
+    if(!guildsettings) {
+      guildAPI.repairGuild(msg.guild);
+      guildsettings = guildAPI.getGuildSettings(msg.guild.id);
+    }
     args = msg.content.toLowerCase().split(' ');
     if(!args[0].startsWith(guildsettings.prefix)) return;
     cmd = args[0].substring(guildsettings.prefix.length);
@@ -357,6 +377,10 @@ let execute = async (msg, args, interaction) => {
     if(args.length == 0) args = null;
   } else {
     guildsettings = guildAPI.getGuildSettings(interaction.guild_id);
+    if(!guildsettings) {
+      guildAPI.repairGuild(client.guilds.resolve(interaction.guild_id));
+      guildsettings = guildAPI.getGuildSettings(interaction.guild_id);
+    }
   }
   switch(cmd) {
     case 'help':
