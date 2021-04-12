@@ -24,7 +24,7 @@ class GuildAPI {
     }
   
     repairGuild(g) {
-      let defaultSettings = JSON.stringify(fs.readFileSync(process.env.CONFIG_PATH).defaultSettings);
+      let defaultSettings = fs.readFileSync(process.env.CONFIG_PATH).defaultSettings;
       this.setGuildSettings(g.id, defaultSettings);
       console.log(`\x1b[35m[GuildAPI] \x1b[32m${g.name} \x1b[0mrepaired!`);
     }
