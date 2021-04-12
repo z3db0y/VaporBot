@@ -31,8 +31,8 @@ const cheerio = require('cheerio');
 const request = require('request');
 const ytsr = require('ytsr');
 const process = require('process');
-const GuildAPI = require('./guildAPI');
-const guildAPI = new GuildAPI.GuildAPI();
+//const GuildAPI = require('./guildAPI');
+//const guildAPI = new GuildAPI.GuildAPI();
 const premiumAPI = require('./premiumAPI');
 const ytdl = require('ytdl-core');
 const ytsearch = require('yt-search');
@@ -42,20 +42,11 @@ const roundToNearest5 = x => Math.round(x/5)*5;
 // if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m ');
 const debugging = process.argv.includes('--debug') || process.argv.includes('--dbg');
 
-function getGuildSettings(guildID) {
-  return JSON.parse(fs.readFileSync(`${guildID}.json`));
-}
-
-function setGuildSettings(guildID, settings) {
-  fs.writeFileSync(`${guildID}.json`, JSON.stringify(settings, null, 2));
-  return true;
-}
-
 let musicBotAPI = new class MusicBot {
 
   sa(connection, query, reset, moi) {
     if(reset) this.resetQ(connection);
-    let guildsettings = getGuildSettings(connection.channel.guild.id);
+    let guildsettings = guildAPI.getGuildSettings(connection.channel.guild.id);
     let srYt = this.srYT;
     let aQ = this.add;
     let rP = this.recursivePlay;
@@ -101,11 +92,11 @@ let musicBotAPI = new class MusicBot {
   }
 
   recursivePlay(c) {
-    let guildsettings = getGuildSettings(c.channel.guild.id);
+    let guildsettings = guildAPI.getGuildSettings(c.channel.guild.id);
     if(guildsettings.lastPlayed) guildsettings.nowPlaying = guildsettings.lastPlayed+1;
     else guildsettings.nowPlaying = 0
     c.play(ytdl(guildsettings.musicQueue[guildsettings.nowPlaying].url, { filter: 'audioonly' })) .on('finish', () => {
-      guildsettings = getGuildSettings(c.channel.guild.id);
+      guildsettings = guildAPI.getGuildSettings(c.channel.guild.id);
 
       if(true) { // If the only user in VC is Vapor, Set inactivity.
         // Inactivity Timeout Logic Here.
@@ -113,13 +104,13 @@ let musicBotAPI = new class MusicBot {
 
       if(guildsettings.loopType == 'song') {
         guildsettings.lastPlayed = guildsettings.nowPlaying-1;
-        setGuildSettings(c.channel.guild.id, guildsettings);
+        guildAPI.setGuildSettings(c.channel.guild.id, guildsettings);
         this.recursivePlay(c);
       }
       if(guildsettings.nowPlaying == guildsettings.musicQueue.length-1) {
         if(guildsettings.loopType == 'queue') {
           guildsettings.lastPlayed = -1;
-          setGuildSettings(c.channel.guild.id, guildsettings);
+          guildAPI.setGuildSettings(c.channel.guild.id, guildsettings);
           this.recursivePlay(c);
         } else {
           // Inactivity Timeout Logic Here.
@@ -129,27 +120,27 @@ let musicBotAPI = new class MusicBot {
   }
 
   resetQ(c) {
-    let guildsettings = getGuildSettings(c.channel.guild.id);
+    let guildsettings = guildAPI.getGuildSettings(c.channel.guild.id);
     guildsettings.musicQueue = [];
     guildsettings.nowPlaying = null;
     guildsettings.lastPlayed = null;
-    setGuildSettings(c.channel.guild.id, guildsettings);
+    guildAPI.setGuildSettings(c.channel.guild.id, guildsettings);
     if(c.dispatcher) c.dispatcher.end();
   }
 
   add(obj, c) {
-    let guildsettings = getGuildSettings(c.channel.guild.id);
+    let guildsettings = guildAPI.getGuildSettings(c.channel.guild.id);
     if(!guildsettings.musicQueue) guildsettings.musicQueue = [obj];
     else guildsettings.musicQueue[guildsettings.musicQueue.length] = obj;
-    setGuildSettings(c.channel.guild.id, guildsettings);
+    guildAPI.setGuildSettings(c.channel.guild.id, guildsettings);
   }
 
   rem(i, c) {
-    let guildsettings = getGuildSettings(c.channel.guild.id);
+    let guildsettings = guildAPI.getGuildSettings(c.channel.guild.id);
     if(!guildsettings.musicQueue) return;
     if(!guildsettings.musicQueue[i]) return;
     guildsettings.splice(i, 1);
-    setGuildSettings(c.channel.guild.id, guildsettings);
+    guildAPI.setGuildSettings(c.channel.guild.id, guildsettings);
   }
 
   async srYT(q) {
@@ -164,29 +155,6 @@ let musicBotAPI = new class MusicBot {
     
   }*/
 
-  getLyrics(q) {
-    request(`https://api.genius.com/search?q=${encodeURIComponent(q)}`, { headers: { 'Authorization': `Bearer ${JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).lyricsToken}` } }, (err, res) => {
-      if(err) return undefined;
-      try {
-        let json = JSON.parse(res.body);
-        let url = undefined;
-        for(let item in json.response.hits) {
-          if(json.response.hits[item].result.full_title.toLowerCase().includes(q.toLowerCase())) return url = `https://genius.com/${json.response.hits[item].result.path}`;
-        }
-        if(!url) return
-        request(url, null, (err, res1) => {
-          if(err) return undefined;
-          let $ = cheerio.load(res1.body);
-          if($(".song_body-lyrics p").text()) {
-            return $(".song-body-lyrics p").text();
-          } else return undefined;
-        });
-      } catch(e) {
-        return undefined;
-      }
-    });
-  }
-
   terminateAll() {
     for(let i in conMap) {
       let con = conMap[i];
@@ -199,11 +167,25 @@ let musicBotAPI = new class MusicBot {
   }
 }
 
-function validateURl(url) {
-  let validUrlRegex = new RegExp(/(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#()?&//=]*)/g);
-  if(validUrlRegex.test(url)) return true;
-  else return false;
-}
+let guildAPI = new class GuildAPI {
+
+  construtor (guildDir) {
+    this.guildDir = guildDir;
+  }
+
+  getGuildSettings(guildID) {
+    return JSON.parse(fs.readFileSync(`guilds/${guildID}.json`));
+  }
+  
+  setGuildSettings(guildID, settings) {
+    fs.writeFileSync(`guilds/${guildID}.json`, JSON.stringify(settings, null, 2));
+    return true;
+  }
+
+  initGuild(id) {
+    if(fs.existsSync(`${this.guildDir}${id}.json`)) return
+  }
+} ('guilds/');
 
 client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
@@ -367,14 +349,14 @@ let execute = async (msg, args, interaction) => {
   args = args || null;
   interaction = interaction || null;
   if(!interaction) {
-    guildsettings = getGuildSettings(msg.guild.id);
+    guildsettings = guildAPI.getGuildSettings(msg.guild.id);
     args = msg.content.toLowerCase().split(' ');
     if(!args[0].startsWith(guildsettings.prefix)) return;
     cmd = args[0].substring(guildsettings.prefix.length);
     args.shift();
     if(args.length == 0) args = null;
   } else {
-    guildsettings = getGuildSettings(interaction.guild_id);
+    guildsettings = guildAPI.getGuildSettings(interaction.guild_id);
   }
   switch(cmd) {
     case 'help':
@@ -685,7 +667,7 @@ let execute = async (msg, args, interaction) => {
         let newPrefix = args[0].value;
         if(newPrefix.startsWith('/')) return client.sendInteractionEmbed(errorMessage('Prefix cannot start with **"/"**!', client.guilds.resolve(interaction.guild_id).me.displayColor), interaction.id, interaction.token);
         guildsettings.prefix = newPrefix;
-        setGuildSettings(interaction.guild_id, guildsettings);
+        guildAPI.setGuildSettings(interaction.guild_id, guildsettings);
         if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m prefix updated: ' + newPrefix);
         client.sendInteractionEmbed(successMessage('Prefix set to ' + newPrefix, client.guilds.resolve(interaction.guild_id).me.displayColor), interaction.id, interaction.token);
       } else {
@@ -695,7 +677,7 @@ let execute = async (msg, args, interaction) => {
         let newPrefix = args[0];
         if(newPrefix.startsWith('/')) return msg.reply({ embed: errorMessage('Prefix cannot start with **"/"**!') });
         guildsettings.prefix = newPrefix;
-        setGuildSettings(msg.guild.id, guildsettings);
+        guildAPI.setGuildSettings(msg.guild.id, guildsettings);
         if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m prefix updated: ' + newPrefix);
         msg.reply({ embed: successMessage('Prefix set to ' + newPrefix, msg.guild.me.displayColor) });
       }
@@ -939,7 +921,7 @@ let execute = async (msg, args, interaction) => {
           for(let index=0; index<userWarnings.length; index++) {
             warningsFields[warningsFields.length] = {
               name: "ID " + userWarnings[index].id + " | " + userWarnings[index].text,
-              value: "Moderator <@" + userWarnings[index].modID + ">"
+              value: "Moderator: " + (userWarnings[index].modID ? "<@" + userWarnings[index].modID + ">" : "N/A")
             };
           }
           author.guild.members.fetch(args[0].value) .then(mem => {
@@ -1024,7 +1006,7 @@ let execute = async (msg, args, interaction) => {
                 "modID": author.id
               };
             }
-            setGuildSettings(author.guild.id, guildsettings);
+            guildAPI.setGuildSettings(author.guild.id, guildsettings);
             client.sendInteractionEmbed(successMessage(`Warned ${userToWarn.user.username} (${userToWarn.id}) with reason **${reason}**!`, author.guild.me.displayColor), interaction.id, interaction.token);
           } else client.sendInteractionEmbed(errorMessage('You do not have permission to warn this user!'), interaction.id, interaction.token);
         }) .catch(err => {
@@ -1064,7 +1046,7 @@ let execute = async (msg, args, interaction) => {
                   "modID": msg.author.id
                 };
               }
-              setGuildSettings(msg.guild.id, guildsettings);
+              guildAPI.setGuildSettings(msg.guild.id, guildsettings);
               msg.reply({ embed: successMessage(`Warned ${mem.user.username} (${mem.id}) with reason ${reason}!`, msg.guild.me.displayColor) });
             } else msg.reply({ embed: errorMessage('You do not have permission to warn this user!') });
           }) .catch(err => {
@@ -1090,7 +1072,7 @@ let execute = async (msg, args, interaction) => {
             if(!guildsettings.warnings[mem.id].find(warn => warn.id === warnID)) return client.sendInteractionEmbed(errorMessage('Invalid warning ID!'), interaction.id, interaction.token);
             let warnIndex = guildsettings.warnings[mem.id].findIndex(warn => warn.id === warnID);
             guildsettings.warnings[mem.id].splice(warnIndex, 1);
-            setGuildSettings(author.guild.id, guildsettings);
+            guildAPI.setGuildSettings(author.guild.id, guildsettings);
             client.sendInteractionEmbed(successMessage(`Removed warning ID ${warnID} from ${mem.user.username}!`, author.guild.me.displayColor), interaction.id, interaction.token);
           } else client.sendInteractionEmbed(errorMessage('You do not have permission to remove warnings from this user!'), interaction.id, interaction.token);
         }) .catch(err => {
@@ -1117,7 +1099,7 @@ let execute = async (msg, args, interaction) => {
               if(!guildsettings.warnings[mem.id].find(warn => warn.id === warnID)) return msg.reply({ embed: errorMessage('Invalid warning ID!') });
               let warnIndex = guildsettings.warnings[mem.id].findIndex(warn => warn.id === warnID);
               guildsettings.warnings[mem.id].splice(warnIndex, 1);
-              setGuildSettings(msg.guild.id, guildsettings);
+              guildAPI.setGuildSettings(msg.guild.id, guildsettings);
               msg.reply({ embed: successMessage(`Removed warning ID ${warnID} from ${mem.user.username}!`, msg.guild.me.displayColor) });
             } else msg.reply({ embed: errorMessage('You do not have permission to remove warnings from this user!') });
           }) .catch(err => {
@@ -1136,7 +1118,7 @@ let execute = async (msg, args, interaction) => {
         if(amount > 100) amount = 100
         else if (amount < 0) amount = 0
         guildsettings.autokick = amount;
-        setGuildSettings(author.guild.id, guildsettings);
+        guildAPI.setGuildSettings(author.guild.id, guildsettings);
         client.sendInteractionEmbed(successMessage('Set warnings until kick to ' + amount + '!' + (amount == 0 ? ' (none)' : ''), author.guild.me.displayColor), interaction.id, interaction.token);
       } else {
         if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
@@ -1146,7 +1128,7 @@ let execute = async (msg, args, interaction) => {
           if(amount > 100) amount = 100
           else if(amount < 0) amount = 0
           guildsettings.autokick = amount;
-          setGuildSettings(msg.guild.id, guildsettings);
+          guildAPI.setGuildSettings(msg.guild.id, guildsettings);
           msg.reply({ embed: successMessage('Set warnings until kick to ' + amount + '!' + (amount == 0 ? ' (none)' : ''), msg.guild.me.displayColor) });
         } else msg.reply({ embed: errorMessage('Please specify amount of warnings!') });
       }
@@ -1160,7 +1142,7 @@ let execute = async (msg, args, interaction) => {
         if(amount > 100) amount = 100
         else if (amount < 0) amount = 0
         guildsettings.autokick = amount;
-        setGuildSettings(author.guild.id, guildsettings);
+        guildAPI.setGuildSettings(author.guild.id, guildsettings);
         client.sendInteractionEmbed(successMessage('Set warnings until ban to ' + amount + '!' + (amount == 0 ? ' (none)' : ''), author.guild.me.displayColor), interaction.id, interaction.token);
       } else {
         if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
@@ -1170,7 +1152,7 @@ let execute = async (msg, args, interaction) => {
           if(amount > 100) amount = 100
           else if(amount < 0) amount = 0
           guildsettings.autokick = amount;
-          setGuildSettings(msg.guild.id, guildsettings);
+          guildAPI.setGuildSettings(msg.guild.id, guildsettings);
           msg.reply({ embed: successMessage('Set warnings until ban to ' + amount + '!' + (amount == 0 ? ' (none)' : ''), msg.guild.me.displayColor) });
         } else msg.reply({ embed: errorMessage('Please specify amount of warnings!') });
       }
@@ -1463,7 +1445,7 @@ let execute = async (msg, args, interaction) => {
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m play command.');
       if(interaction) {
         let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
-        let guildsettings = getGuildSettings(author.guild.id);
+        let guildsettings = guildAPI.getGuildSettings(author.guild.id);
         if(!author.guild.me.voice.channelID) {
           if(!author.voice.channelID) return client.sendInteractionEmbed(errorMessage('You are not in a voice channel!'), interaction.id, interaction.token);
           await author.voice.channel.join() .then(con => {
