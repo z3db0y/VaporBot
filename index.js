@@ -4,7 +4,7 @@ const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
 let conMap = new Map();
 
-const BOT_CHANNEL = botChannels.BETA;
+const BOT_CHANNEL = (process.argv.includes('--beta') || process.argv.includes('-b') ? botChannels.BETA : botChannels.STABLE);
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -27,8 +27,6 @@ const client = new Discord.Client({intents:
   ]});
 //const client = new Discord.Client({ws: {intents: ['DIRECT_MESSAGES', 'DIRECT_MESSAGE_REACTIONS', 'DIRECT_MESSAGE_TYPING', 'GUILDS', 'GUILD_BANS', 'GUILD_EMOJIS', 'GUILD_INTEGRATIONS', 'GUILD_INVITES', 'GUILD_MEMBERS', 'GUILD_MESSAGES', 'GUILD_MESSAGE_REACTIONS', 'GUILD_MESSAGE_TYPING', 'GUILD_VOICE_STATES', 'GUILD_WEBHOOKS']}});
 const fs = require('fs');
-const cheerio = require('cheerio');
-const request = require('request');
 const ytsr = require('ytsr');
 const process = require('process');
 //const GuildAPI = require('./guildAPI');
