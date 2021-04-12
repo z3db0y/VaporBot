@@ -245,7 +245,7 @@ client.on('ready', () => {
     let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
     client.guilds.cache.forEach((guild) => {
         initSlashCommands(guild);
-        let guildsettings = JSON.parse(fs.readFileSync(`${guild.id}.json`));
+        let guildsettings = guildAPI.getGuildSettings(guild.id);
         guildAPI.initGuild(guild);
         botDevelopers.forEach(dev => {
           guild.members.fetch(dev) .then(user => {
