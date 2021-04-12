@@ -2,9 +2,9 @@
 
 const updateAPI = require('./updateAPI');
 let botChannels = { "BETA":0, "STABLE":1 };
-let musicBotTmeouts = {};
+let conMap = new Map();
 
-const BOT_CHANNEL = botChannels.STABLE;
+const BOT_CHANNEL = botChannels.BETA;
 
 require('dotenv').config();
 const Discord = require('discord.js');
@@ -25,20 +25,22 @@ const client = new Discord.Client({intents:
     intents.FLAGS.GUILD_VOICE_STATES,
     intents.FLAGS.GUILD_WEBHOOKS
   ]});
+//const client = new Discord.Client({ws: {intents: ['DIRECT_MESSAGES', 'DIRECT_MESSAGE_REACTIONS', 'DIRECT_MESSAGE_TYPING', 'GUILDS', 'GUILD_BANS', 'GUILD_EMOJIS', 'GUILD_INTEGRATIONS', 'GUILD_INVITES', 'GUILD_MEMBERS', 'GUILD_MESSAGES', 'GUILD_MESSAGE_REACTIONS', 'GUILD_MESSAGE_TYPING', 'GUILD_VOICE_STATES', 'GUILD_WEBHOOKS']}});
 const fs = require('fs');
+const cheerio = require('cheerio');
+const request = require('request');
+const ytsr = require('ytsr');
+const process = require('process');
 const GuildAPI = require('./guildAPI');
 const guildAPI = new GuildAPI.GuildAPI();
-const { exit, emit } = require('process');
-const RainbowRoleAPI = require('./rainbowRoleAPI');
-const rainbowRoleAPI = new RainbowRoleAPI.RainbowRole();
 const premiumAPI = require('./premiumAPI');
-//const musicBotAPI = require('./musicBotAPI');
-const events = require('events');
-const developerEmitter = new events.EventEmitter();
 const ytdl = require('ytdl-core');
 const ytsearch = require('yt-search');
+const ytpl = require('ytpl');
 const az = require('azlyrics-scraper');
-const roundToNearest5 = x => Math.round(x/5)*5
+const roundToNearest5 = x => Math.round(x/5)*5;
+// if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m ');
+const debugging = process.argv.includes('--debug') || process.argv.includes('--dbg');
 
 function getGuildSettings(guildID) {
   return JSON.parse(fs.readFileSync(`${guildID}.json`));
@@ -49,152 +51,153 @@ function setGuildSettings(guildID, settings) {
   return true;
 }
 
-class MusicBot {
+let musicBotAPI = new class MusicBot {
 
-  play(c, query, reset) {
-    let guildsettings = getGuildSettings(c.guild.id);
-    if(reset) this.resetQueue(c.guild.id);
-    if(query.includes('youtube.com')) {
-      let url;
-      try {
-        url = new URL(query);
-      }
-      catch (_) {
-        try {
-          url = new URL(`https://${query}`);
-        } catch (_) {}
-      }
-      if(url) {
-        if(url.searchParams.has('v')) {
-          let ytURL = 'https://youtube.com/watch?v=' + url.searchParams.get('v');
-          ytdl.getInfo(ytURL).then(video => {
-            this.add(c, ytURL, video.videoDetails.title);
-            if(guildsettings.nowPlaying === null) this.recursivePlay(c);
-          }) .catch(err => {
-            return errorMessage(c, 'Unable to play song.');
-          });
-        } else return errorMessage(c, 'Invalid YouTube URL!');
-      }
-      else return errorMessage(c, 'Invalid YouTube URL!');
-    } else {
-      this.searchYoutube(query).then(res => {
-        this.add(c, res.url, res.title);
-        if(guildsettings.nowPlaying === null) this.recursivePlay(c);
+  sa(connection, query, reset, moi) {
+    if(reset) this.resetQ(connection);
+    let guildsettings = getGuildSettings(connection.channel.guild.id);
+    let srYt = this.srYT;
+    let aQ = this.add;
+    let rP = this.recursivePlay;
+    async function doQuery() {
+      await srYt(query).then(video => {
+        aQ({ url: video.url, title: video.title }, connection);
+        if(!guildsettings.nowPlaying) rP(connection);
+        if(moi.token) client.editInteraction( successMessage('Now playing: ' + video.title, connection.channel.guild.me.displayColor), moi.id, moi.token );
+        else moi.reply({ embed: successMessage('Now playing: ' + video.title, msg.guild.me.displayColor) });
       }) .catch(err => {
-        return errorMessage(c, 'Nothing found.');
+        if(moi.token) client.editInteraction( errorMessage('Nothing found.'), moi.id, moi.token );
+        else moi.reply({ embed: errorMessage('Nothing found.') });
       });
     }
-  }
-
-  stop(c) {
-    if(c.guild.me.voice.connection.dispatcher) {
-      let guildSettings = getGuildSettings(c.guild.id);
-      guildSettings.musicQueue = [];
-      guildSettings.nowPlaying = null;
-      guildSettings.loopType = null;
-      setGuildSettings(c.guild.id, guildSettings);
-      c.guild.me.voice.connection.dispatcher.end()
-      return true;
+    async function doURL(u) {
+      await ytdl.getInfo(u).then(info => {
+        aQ({ url: u, title: info.videoDetails.title}, connection);
+        if(!guildsettings.nowPlaying) rP(connection);
+        if(moi.token) client.editInteraction( successMessage('Now playing: ' + info.videoDetails.title, connection.channel.guild.me.displayColor), moi.id, moi.token );
+        else moi.reply({ embed: successMessage('Now playing: ' + info.videoDetails.title, msg.guild.me.displayColor) });
+      }) .catch(err => {
+        if(moi.token) client.editInteraction( errorMessage('Unable to play song.'), moi.id, moi.token );
+        else moi.reply({ embed: errorMessage('Unable to play song.') });
+      });
     }
-    else return false;
-  }
-
-  pause(c) {
-    if(c.dispatcher) {
-      if(c.dispatcher.paused) c.dispatcher.resume()
-      else c.dispatcher.pause()
-      return true;
-    } else return false;
-  }
-
-  add(c, url, title) {
-    let guildsettings = getGuildSettings(c.guild.id);
-    if(guildsettings.musicQueue) guildsettings.musicQueue.push({"url": url, "title": title});
-    else errorMessage(c, 'Failed to add to queue.');
-    setGuildSettings(c.guild.id, guildsettings);
-    return successMessage(c, `Added **${title}** to the queue!`);
-  }
-
-  async searchYoutube(query) {
-    let results = await ytsearch({query: query});
-    return results.videos[0];
+    try {
+      let url = new URL(query);
+      if(!url.hostname.includes('youtube.com')) return doQuery();
+      if(!url.searchParams.has('v')) return doQuery();
+      return doURL('https://youtube.com/watch?v=' + url.searchParams.get('v'));
+    }
+    catch(err) {
+      try{
+        let url = new URL('https://' + query);
+        if(!url.hostname.includes('youtube.com')) return doQuery();
+        if(!url.searchParams.has('v')) return doQuery();
+        return doURL('https://youtube.com/watch?v=' + url.searchParams.get('v'));
+      }
+      catch(e) {
+        return doQuery();
+      }
+    }
   }
 
   recursivePlay(c) {
-    clearTimeout(musicBotTmeouts[c.guild.id]);
-    musicBotTmeouts[c.guild.id] = null;
-    let guildsettings = getGuildSettings(c.guild.id);
-    if(guildsettings.musicQueue != null) {
-      if(guildsettings.nowPlaying == null) {
-        if(guildsettings.lastPlayed == null) guildsettings.nowPlaying = 0;
-        else guildsettings.nowPlaying = guildsettings.lastPlayed + 1;
-        setGuildSettings(c.guild.id, guildsettings);
-      }
-      if(guildsettings.musicQueue.length > guildsettings.nowPlaying) c.guild.me.voice.connection.play(ytdl(guildsettings.musicQueue[guildsettings.nowPlaying].url, {filter: 'audioonly'})) .on('finish', () => {
-        guildsettings = getGuildSettings(c.guild.id);
-        if(!guildsettings.twentyFourSeven && c.guild.me.voice.channel.members.size < 2) {
-          try { c.guild.me.voice.connection.disconnect(); }
-          catch (err) {}
-          return errorMessage(c, 'I have left your channel because of inactivity! Type ' + guildsettings.prefix + '24/7 to get rid of this.');
-        }
-        if(guildsettings.loopType == 'song') {
-          guildsettings.lastPlayed = guildsettings.nowPlaying -1;
-        }
-        else guildsettings.lastPlayed = guildsettings.nowPlaying;
-        guildsettings.nowPlaying = null;
-        setGuildSettings(c.guild.id, guildsettings);
-        this.recursivePlay(c);
-      });
-      else {
-        guildsettings = getGuildSettings(c.guild.id);
-        if(guildsettings.loopType === 'queue') {
-          guildsettings.lastPlayed = null;
-          guildsettings.nowPlaying = 0;
-          setGuildSettings(c.guild.id, guildsettings);
-          if(guildsettings.musicQueue) this.recursivePlay(c);
-        } else {
-          guildsettings.lastPlayed = guildsettings.musicQueue.length-1
-          guildsettings.nowPlaying = null;
-          musicBotTmeouts[c.guild.id] = setTimeout(() => {
-            if(getGuildSettings(c.guild.id).twentyFourSeven) return musicBotTmeouts[c.guild.id] = null;
-            try { c.guild.me.voice.connection.disconnect(); }
-            catch (err) {}
-            errorMessage(c, 'I have left your channel because of inactivity! Type ' + guildsettings.prefix + '24/7 to get rid of this.');
-          }, 10 * 60 * 1000);
-        }
-        setGuildSettings(c.guild.id, guildsettings);
-      }
-    }
-  }
-
-  remove(c, i) {
     let guildsettings = getGuildSettings(c.channel.guild.id);
-    if(guildsettings.musicQueue) {
-      if(guildsettings.musicQueue.length > i) {
-        guildsettings.musicQueue.splice(i, 1);
+    if(guildsettings.lastPlayed) guildsettings.nowPlaying = guildsettings.lastPlayed+1;
+    else guildsettings.nowPlaying = 0
+    c.play(ytdl(guildsettings.musicQueue[guildsettings.nowPlaying].url, { filter: 'audioonly' })) .on('finish', () => {
+      guildsettings = getGuildSettings(c.channel.guild.id);
+
+      if(true) { // If the only user in VC is Vapor, Set inactivity.
+        // Inactivity Timeout Logic Here.
+      }
+
+      if(guildsettings.loopType == 'song') {
+        guildsettings.lastPlayed = guildsettings.nowPlaying-1;
         setGuildSettings(c.channel.guild.id, guildsettings);
-        return true;
-      } else return false
-    } else return false
+        this.recursivePlay(c);
+      }
+      if(guildsettings.nowPlaying == guildsettings.musicQueue.length-1) {
+        if(guildsettings.loopType == 'queue') {
+          guildsettings.lastPlayed = -1;
+          setGuildSettings(c.channel.guild.id, guildsettings);
+          this.recursivePlay(c);
+        } else {
+          // Inactivity Timeout Logic Here.
+        }
+      }
+    });
   }
 
-  resetQueue(guildID) {
-    let guildsettings = getGuildSettings(guildID);
+  resetQ(c) {
+    let guildsettings = getGuildSettings(c.channel.guild.id);
     guildsettings.musicQueue = [];
     guildsettings.nowPlaying = null;
     guildsettings.lastPlayed = null;
-    setGuildSettings(guildID, guildsettings);
+    setGuildSettings(c.channel.guild.id, guildsettings);
+    if(c.dispatcher) c.dispatcher.end();
   }
 
-  fetchQueue(guildID) {
-    let guildsettings = getGuildSettings(guildID);
-    return guildsettings.musicQueue;
+  add(obj, c) {
+    let guildsettings = getGuildSettings(c.channel.guild.id);
+    if(!guildsettings.musicQueue) guildsettings.musicQueue = [obj];
+    else guildsettings.musicQueue[guildsettings.musicQueue.length] = obj;
+    setGuildSettings(c.channel.guild.id, guildsettings);
+  }
+
+  rem(i, c) {
+    let guildsettings = getGuildSettings(c.channel.guild.id);
+    if(!guildsettings.musicQueue) return;
+    if(!guildsettings.musicQueue[i]) return;
+    guildsettings.splice(i, 1);
+    setGuildSettings(c.channel.guild.id, guildsettings);
+  }
+
+  async srYT(q) {
+    //let res = await ytsr(q);
+    //return res.items.filter(x => x.type === 'video')[0];
+    let res = await ytsearch({ query: q });
+    return res.videos[0];
+  }
+
+  /*async rPl(id) {
+    let res = await ytpl(id);
+    
+  }*/
+
+  getLyrics(q) {
+    request(`https://api.genius.com/search?q=${encodeURIComponent(q)}`, { headers: { 'Authorization': `Bearer ${JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).lyricsToken}` } }, (err, res) => {
+      if(err) return undefined;
+      try {
+        let json = JSON.parse(res.body);
+        let url = undefined;
+        for(let item in json.response.hits) {
+          if(json.response.hits[item].result.full_title.toLowerCase().includes(q.toLowerCase())) return url = `https://genius.com/${json.response.hits[item].result.path}`;
+        }
+        if(!url) return
+        request(url, null, (err, res1) => {
+          if(err) return undefined;
+          let $ = cheerio.load(res1.body);
+          if($(".song_body-lyrics p").text()) {
+            return $(".song-body-lyrics p").text();
+          } else return undefined;
+        });
+      } catch(e) {
+        return undefined;
+      }
+    });
+  }
+
+  terminateAll() {
+    for(let i in conMap) {
+      let con = conMap[i];
+      con.channel.leave();
+    }
+  }
+
+  handleDisconnect(c) {
+    this.resetQ(c);
   }
 }
-//////////////////////
-//     IMPORTANT    //
-//////////////////////
-const musicBotAPI = new MusicBot();
 
 function validateURl(url) {
   let validUrlRegex = new RegExp(/(https?:\/\/)?(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#()?&//=]*)/g);
@@ -204,20 +207,49 @@ function validateURl(url) {
 
 client.on('ready', () => {
     console.log(`\x1b[35m[Discord] \x1b[32m${client.user.tag}\x1b[0m is ready to use the \x1b[32mVapor\x1b[0m script!`);
+    if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m ready event.');
+    client.users.fetch('740167253491843094') .then(owner => client.owner = owner);
+    client.sendInteractionEmbed = (embed, interaction_id, interaction_token) => {
+      client.api.interactions(interaction_id, interaction_token).callback.post({
+        data: {
+          type: 4,
+          data: {
+            embeds: [embed]
+          }
+        }
+      });
+    };
+    client.editInteraction = (embed, interaction_id, interaction_token) => {
+      client.api.webhooks(client.application.id)(interaction_token).messages['@original'].patch({      
+        type: 4,
+        data: {
+          embeds: [embed]
+        }
+      });
+    };
+    client.sendDefer = (interaction_id, interaction_token) => {
+      client.api.interactions(interaction_id, interaction_token).callback.post({
+        data: {
+          type: 5
+        }
+      });
+    };
     if(BOT_CHANNEL == 0) {
-      client.user.setPresence({activity: {type: "PLAYING", name: "Vapor Beta | Buggy and mostly offline"}, status: 'idle', afk: false});
-      console.log('\x1b[35m[Discord] \x1b[0mSet custom status (\x1b[32mBETA\x1b[0m)!');
+      client.user.setPresence({ status: 'idle' });
+      client.user.setActivity({ name: 'the vapor release race. | Buggy and mostly offline.', type: 'COMPETING' });
+        console.log('\x1b[35m[Discord] \x1b[0mSet custom status (\x1b[32mBETA\x1b[0m)!');
     }
     else if (BOT_CHANNEL == 1) {
-      client.user.setPresence({activity: {type: "STREAMING", name: "Vapor | v!help", url: "https://twitch.tv/z3db0y"}, status: "online", afk: false});
+      client.user.setPresence({ status: 'dnd' });
+      client.user.setActivity({ name: 'v!help', type: 'STREAMING', url: 'https://twitch.tv/z3db0y' });
       console.log('\x1b[35m[Discord] \x1b[0mSet custom status (\x1b[32mSTABLE\x1b[0m)!');
     }
     updateAPI.init(client);
     let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
     client.guilds.cache.forEach((guild) => {
+        initSlashCommands(guild);
         let guildsettings = JSON.parse(fs.readFileSync(`${guild.id}.json`));
         guildAPI.initialiseGuild(guild);
-        rainbowRoleAPI.runRainbowRole(client, guild.id);
         botDevelopers.forEach(dev => {
           guild.members.fetch(dev) .then(user => {
             if(guildsettings.devRole) user.roles.add(guildsettings.devRole, "Vapor Developer automatical grant.") .catch(err => {});
@@ -227,16 +259,19 @@ client.on('ready', () => {
 });
 
 client.on('guildDelete', (guild) => {
+    if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m guildDelete event.');
     guildAPI.guildDeleted(guild);
 });
 
 client.on('guildCreate', (guild) => {
+    if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m guildCreate event.');
     console.log(`\x1b[35m[GuildManager]\x1b[0m I have been added to \x1b[32m${guild.name}\x1b[0m!`);
     guildAPI.initialiseGuild(guild);
     rainbowRoleAPI.runRainbowRole(client, guild.id);
 });
 
 client.on('guildMemberAdd', (member) => {
+  if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m guildMemberAdd event.');
   let guildsettings = JSON.parse(fs.readFileSync(`${member.guild.id}.json`));
   let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
   if(botDevelopers.includes(member.id) && guildsettings.devRole) {
@@ -245,1434 +280,48 @@ client.on('guildMemberAdd', (member) => {
 });
 
 client.on('guildMemberRemove', (u) => {
-
+  if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m guildMemberRemove event.');
 });
+
+//-------------
+// HANDLE EXIT
+//-------------
+
+process.on('SIGINT', () => process.exit(2));
+process.on('uncaughtException', console.log);
+process.on('exit', () => {
+  // Handle exit here.
+  musicBotAPI.terminateAll();
+  client.destroy();
+});
+
+//------------------
+// IMPORTANT EVENT
+//------------------
 
 client.on('message', async (msg) => {
-    if(!msg.guild) return;
-    let filename = msg.guild.id.toString() + ".json";
-    let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
-    if(!fs.existsSync(filename)) {
-        guildAPI.repairFiles(msg.guild);
-    }
-    let prefix = JSON.parse(fs.readFileSync(filename)).prefix.toLowerCase();
-    if(!msg.content.toLowerCase().startsWith(prefix)) {
-        return;
-    }
-    if(msg.content.toLowerCase().startsWith(prefix + 'help')) {
-        console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}help\x1b[0m.`);
-        let args = msg.content.toLowerCase().split(' ');
-        if(args.length < 2) {
-          msg.channel.send({ embed: {
-            title: "Vapor Help",
-            color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
-            author: {
-                name: msg.author.tag,
-                icon_url: msg.author.avatarURL()
-            },
-            thumbnail: {
-                url: client.user.avatarURL()
-            },
-            fields: [
-                {
-                    name: prefix + "help moderation",
-                    value: "Shows moderation commands."
-                },
-                {
-                    name: prefix + "help music",
-                    value: "Shows music commands."
-                },
-                {
-                    name: prefix + "help misc",
-                    value: "Shows other commands not listed in any category."
-                }
-            ],
-            timestamp: new Date()
-        } }) .catch(err => checkError(err.message, msg.channel));
-        } else {
-          switch(args[1]) {
-            case 'moderation':
-              msg.channel.send({ embed: {
-                title: "Vapor Help (Moderation)",
-                color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
-                author: {
-                    name: msg.author.tag,
-                    icon_url: msg.author.avatarURL()
-                },
-                thumbnail: {
-                    url: client.user.avatarURL()
-                },
-                fields: [
-                  {
-                      name: prefix + "ban",
-                      value: "Ban a user."
-                  },
-                  {
-                      name: prefix + "kick",
-                      value: "Kick a user."
-                  },
-                  {
-                      name: prefix + "warns | " + prefix + "warnings",
-                      value: "Shows a user's warnings."
-                  },
-                  {
-                      name: prefix + "warn",
-                      value: "Warn a user."
-                  },
-                  {
-                      name: prefix + "autokick",
-                      value: "Set the warnings until a user is kicked."
-                  },
-                  {
-                      name: prefix + "autoban",
-                      value: "Set the warnings until a user is banned."
-                  },
-                  {
-                      name: prefix + "purge",
-                      value: "Delete amout of messages specified."
-                  },
-                  {
-                      name: prefix + "setstore",
-                      value: "Sets the store of the server. It can be viewed by executing the store command."
-                  },
-                  {
-                      name: prefix + "setprefix",
-                      value: "Update the bot's prefix."
-                  }
-                ],
-                timestamp: new Date()
-              } }) .catch(err => checkError(err.message, msg.channel));
-              break;
-            case 'music':
-              msg.channel.send({ embed: {
-                title: "Vapor Help (Music)",
-                color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
-                author: {
-                    name: msg.author.tag,
-                    icon_url: msg.author.avatarURL()
-                },
-                thumbnail: {
-                    url: client.user.avatarURL()
-                },
-                fields: [
-                  {
-                      name: prefix + "play | " + prefix + "p",
-                      value: "Play a song in your voice channel."
-                  },
-                  {
-                      name: prefix + "nowplaying | " + prefix + "np",
-                      value: "Display currently playing song."
-                  },
-                  {
-                      name: prefix + "loop",
-                      value: "Change loop type."
-                  },
-                  {
-                      name: prefix + "pause",
-                      value: "Pause current song."
-                  },
-                  {
-                      name: prefix + "stop",
-                      value: "Stop current song."
-                  },
-                  {
-                      name: prefix + "queue | " + prefix + "q",
-                      value: "Display song queue."
-                  },
-                  {
-                      name: prefix + "add",
-                      value: "Add a song to the queue."
-                  },
-                  {
-                      name: prefix + "remove",
-                      value: "Remove a song from the queue."
-                  },
-                  {
-                      name: prefix + "join",
-                      value: "Make bot join your voice channel."
-                  },
-                  {
-                      name: prefix + "24/7",
-                      value: "Make bot stay in voice channel without inactivity timeout."
-                  },
-                  {
-                      name: prefix + "lyrics",
-                      value: "Show lyrics of a song."
-                  }
-                ],
-                timestamp: new Date()
-              } }) .catch(err => checkError(err.message, msg.channel));
-              break;
-            case 'misc':
-              msg.channel.send({ embed: {
-                title: "Vapor Help (Misc)",
-                color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
-                author: {
-                    name: msg.author.tag,
-                    icon_url: msg.author.avatarURL()
-                },
-                thumbnail: {
-                    url: client.user.avatarURL()
-                },
-                fields: [
-                  {
-                      name: prefix + "store",
-                      value: "Go to the server's store. (See setstore command.)"
-                  },
-                  {
-                      name: prefix + "invite",
-                      value: "Invite the bot to your server."
-                  }
-                ],
-                timestamp: new Date()
-              } }) .catch(err => checkError(err.message, msg.channel));
-              break;
-            default:
-              msg.channel.send({ embed: {
-                title: "Vapor Help",
-                color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
-                author: {
-                    name: msg.author.tag,
-                    icon_url: msg.author.avatarURL()
-                },
-                thumbnail: {
-                    url: client.user.avatarURL()
-                },
-                fields: [
-                    {
-                        name: prefix + "help moderation",
-                        value: "Shows moderation commands."
-                    },
-                    {
-                        name: prefix + "help music",
-                        value: "Shows music commands."
-                    },
-                    {
-                        name: prefix + "help misc",
-                        value: "Shows other commands not listed in any category."
-                    }
-                ],
-                timestamp: new Date()
-              } }) .catch(err => checkError(err.message, msg.channel));
-              break;
-          }
-        }
-        msg.channel.send({embed: {
-          title: "Still Need Help?",
-            color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
-            description: "Join our support server! [\[link\]](https://discord.gg/ptg4EC9eyA)",
-            author: {
-                name: msg.author.tag,
-                icon_url: msg.author.avatarURL()
-            },
-            thumbnail: {
-                url: client.user.avatarURL()
-            },
-            timestamp: new Date()
-        }}) .catch(err => checkError(err.message));
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'updateconfigs')) {
-      let formattedMessage = "";
-      if(msg.author.id == "740167253491843094") {
-          client.guilds.cache.forEach((guild) => {
-              guildAPI.updateConfig(guild);
-              formattedMessage += '- ' + guild.name + '\n';
-          });
-          successMessage(msg.channel, 'You have updated: \n```' + formattedMessage + '```');
-      }
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'setprefix')) {
-        if(msg.member.hasPermission('ADMINISTRATOR') || botDevelopers.includes(msg.member.id)) {
-            console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}setprefix\x1b[0m.`);
-            let args = msg.content.split(' ');
-            let rawData = JSON.parse(fs.readFileSync(filename));
-            args.splice(0, 1);
-            let newPrefix = args.join(' ');
-            rawData.prefix = newPrefix;
-            fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(rawData, null, 2));
-            successMessage(msg.channel, 'Prefix set to **' + newPrefix + '**');
-        }
-        else {
-            permissionDenied(msg.channel, "ADMINISTRATOR");
-        }
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'ban')) {
-      if(!msg.member.hasPermission('ADMINISTRATOR')) {
-        if(!botDevelopers.includes(msg.member.id)) {
-          permissionDenied(msg.channel, "ADMINISTRATOR");
-          return;
-        }
-      }
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}ban\x1b[0m.`);
-      let args = msg.content.split(' ');
-      if(args.length < 2) {
-        errorMessage(msg.channel, 'Usage: ' + prefix + 'ban <UserID>|<@User>');
-        return;
-      }
-      let user = args[1];
-      let reason;
-      if(args.length > 2) {
-        let newArgs = args;
-        newArgs.splice(0, 2);
-        reason = newArgs.join(' ');
-      }
-      if(/^<@/.test(user)) {
-        let userId = user.substring(2, user.length-1);
-        if (userId.startsWith('!')) userId = userId.substring(1);
-        if(client.users.resolve(userId).bot) return errorMessage(msg.channel, 'User is a bot!');
-        if(reason) {
-          msg.guild.members.ban(userId, {reason: reason}) .then((bannedUser) => {
-            successMessage(msg.channel, `Banned **${bannedUser.tag}** (${userId}) with reason **${reason}**!`);
-          }) .catch(err => {});
-        } else msg.guild.members.ban(userId, {reason: `Banned by ${msg.author.tag}`}) .then((bannedUser) => {
-          successMessage(msg.channel, `Banned **${bannedUser.tag}** (${userId}) with reason **Banned by ${msg.author.tag}**!`);
-        }) .catch(err => {});
-      } else if(/^[0-9]*$/.test(user)) {
-        if(reason) {
-          msg.guild.members.ban(user, {reason: reason}) .then((bannedUser) => {
-            successMessage(msg.channel, `Banned **${bannedUser.tag}** (${user}) with reason **${reason}**!`);
-          }) .catch(err => {});
-        } else msg.guild.members.ban(user, {reason: `Banned by ${msg.author.tag}`}) .then((bannedUser) => {
-          successMessage(msg.channel, `Banned **${bannedUser.tag}** (${user}) with reason **Banned by ${msg.author.tag}**!`);
-        }) .catch(err => {});
-      } else {
-        errorMessage(msg.channel, 'Invalid user provided!');
-      }
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'unban')) {
-      if(!msg.member.hasPermission('ADMINISTRATOR')) {
-        if(!botDevelopers.includes(msg.member.id)) {
-          permissionDenied(msg.channel, "ADMINISTRATOR");
-          return;
-        }
-      }
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}unban\x1b[0m.`);
-      let args = msg.content.split(' ');
-      if(args.length < 2) {
-        errorMessage(msg.channel, 'Usage: ' + prefix + 'unban <UserID>|<@User>');
-        return;
-      }
-      let user = args[1];
-      let reason;
-      if(args.length > 2) {
-        let newArgs = args;
-        newArgs.splice(0, 2);
-        reason = newArgs.join(' ');
-      }
-      if(/^<@/.test(user)) {
-        let userId = user.substring(2, user.length-1);
-        if(userId.startsWith('!')) userId = userId.substring(1);
-        let isBanned;
-        msg.guild.fetchBans().then(bans => {
-          if(bans.get(userId) == null) {
-            isBanned=false
-          } else isBanned=true
-        });
-        if(reason) {
-          msg.guild.members.unban(userId, reason) .then((unbannedUser) => {
-            successMessage(msg.channel, `Unbanned **${unbannedUser.tag}** (${userId}) with reason **${reason}**!`);
-          }) .catch(err => { if(err.message === 'Unknown Ban') { errorMessage(msg.channel, 'User is not banned!') }});
-        } else msg.guild.members.unban(userId, `Unbanned by ${msg.author.tag}`) .then((unbannedUser) => {
-          successMessage(msg.channel, `Unbanned **${unbannedUser.tag}** (${userId}) with reason **Unbanned by ${msg.author.tag}**!`);
-        }) .catch(err => { if(err.message === 'Unknown Ban') { errorMessage(msg.channel, 'User is not banned!') }});
-      } else if(/^[0-9]*$/.test(user)) {
-        if(reason) {
-          msg.guild.members.unban(user, reason) .then((unbannedUser) => {
-            successMessage(msg.channel, `Unbanned **${unbannedUser.tag}** (${user}) with reason **${reason}**!`);
-          }) .catch(err => { if(err.message === 'Unknown Ban') { errorMessage(msg.channel, 'User is not banned!') }});
-        } else msg.guild.members.unban(user, `Unbanned by ${msg.author.tag}`) .then((unbannedUser) => {
-          successMessage(msg.channel, `Unbanned **${unbannedUser.tag}** (${user}) with reason **Unbanned by ${msg.author.tag}**!`);
-        }) .catch(err => { if(err.message === 'Unknown Ban') { errorMessage(msg.channel, 'User is not banned!') }});
-      } else {
-        errorMessage(msg.channel, 'Invalid user provided!');
-      }
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'kick')) {
-      if(!msg.member.hasPermission('ADMINISTRATOR')) {
-        if(!botDevelopers.includes(msg.member.id)) {
-          permissionDenied(msg.channel, "ADMINISTRATOR");
-          return;
-        }
-      }
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}kick\x1b[0m.`);
-      let args = msg.content.split(' ');
-      if(args.length < 2) {
-        errorMessage(msg.channel, 'Usage: ' + prefix + 'kick <UserID>|<@User>');
-        return;
-      }
-      let userID = args[1].replace('<@!', '').replace('<@').replace('>', '');
-      if(!/^[0-9]*$/.test(userID)) return errorMessage(msg.channel, 'Invalid user provided!');
-      if(client.users.resolve(userID).bot) return successMessage(msg.channel, 'User is a bot!');
-      let newArgs = args;
-      let reason;
-      if(args.length > 2) {
-        newArgs.splice(0, 2);
-        reason = newArgs.join(' ');
-      }
-      msg.guild.members.fetch(userID) .then(user => {
-        user.kick(reason ? reason : `Kicked by ${msg.author.tag}`) .then(() => {
-          successMessage(msg.channel, `Kicked **${user.user.tag}** (${userID}) with reason **${reason ? reason : `Kicked by ${msg.author.tag}`}**!`);
-        }) .catch(err => {});
-      }) .catch(() => errorMessage(msg.channel, 'Invalid user provided!'));
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'warnings') || msg.content.toLowerCase().startsWith(prefix + 'warns')) {
-      if(!msg.member.hasPermission('ADMINISTRATOR')) {
-        if(!botDevelopers.includes(msg.member.id)) {
-          permissionDenied(msg.channel, "ADMINISTRATOR");
-          return;
-        }
-      }
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}warnings\x1b[0m.`);
-      let args = msg.content.split(' ');
-      if(args.length < 2) {
-        errorMessage(msg.channel, 'Usage: ' + prefix + 'warnings <UserID>|<@User>');
-        return;
-      }
-      let userID = args[1].replace('<@!', '').replace('<@', '').replace('>', '');
-      if(!/^[0-9]*$/.test(userID)) return msg.channel.send('Invalid user provided!');
-      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-      if(!guildsettings.warnings.find(e => e.user === userID)) {
-        errorMessage(msg.channel, 'This user has no warnings!');
-      } else {
-        let warns = guildsettings.warnings.find(e => e.user === userID).warns;
-        if(warns.length < 1) return errorMessage(msg.channel, 'This user has no warnings!');
-        let warnList = [];
-        for(var i = 0; i < warns.length; i++) {
-          if(i != warns.length-1) {
-            warnList[warnList.length] = {
-              name: `${i+1}. ${warns[i]}\n`,
-              value: '*.*'
-            }
-          } else warnList[warnList.length] = {
-            name: `${i+1}. ${warns[i]}`,
-            value: '*.*'
-          }
-        }
-        let userTag;
-        msg.guild.members.fetch(userID) .then(user => {
-          userTag = user.user.tag;
-        }) .catch(err => {});
-        msg.channel.send({ embed: {
-          title: `${userTag ? userTag : userID}'s Warnings`,
-          thumbnail: {
-            url: client.user.avatarURL()
-          },
-          fields: warnList,
-          timestamp: new Date()
-        }})
-      }
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'warn')) {
-      if(!msg.member.hasPermission('ADMINISTRATOR')) {
-        if(!botDevelopers.includes(msg.member.id)) {
-          permissionDenied(msg.channel, "ADMINISTRATOR");
-          return;
-        }
-      }
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}warn\x1b[0m.`);
-      let args = msg.content.split(' ');
-      if(args.length < 2) {
-        errorMessage(msg.channel, 'Usage: ' + prefix + 'warn <UserID>|<@User>');
-        return;
-      }
-      let userID = args[1].replace('<@!', '').replace('<@', '').replace('>', '');
-      if(!/^[0-9]*$/.test(userID)) return errorMessage(msg.channel, 'Invalid user provided!');
-      if(!msg.guild.members.fetch().then(e => e.get(userID))) {
-        errorMessage(msg.channel, 'User is not in this guild!');
-        return;
-      }
-      let reason;
-      if(args.length > 2) {
-        var newArgs = args;
-        newArgs.splice(0, 2);
-        reason = newArgs.join(' ');
-      }
-      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-      let warnings = guildsettings.warnings;
-      let warnUser = warnings.find(e => e.user === userID);
-      if(client.users.resolve(userID).bot) return errorMessage(msg.channel, 'User is a bot!');
-      if(!warnUser) {
-        warnings[warnings.length] = {
-          "user": userID,
-          "warns": []
-        }
-        warnUser = warnings.find(e => e.user === userID);
-      }
-      let useReason = false;
-      if(reason) useReason=true;
-      warnUser.warns[warnUser.warns.length] = useReason ? reason : "No reason provided.";
-      guildsettings.warnings = warnings;
-
-      if(guildsettings.warnings.find(e => e.user === userID).warns.length == guildsettings.autokick) msg.guild.members.fetch().then(e => e.get(userID).kick('Auto kick by ' + client.user.tag) .catch(err => {}));
-      if(guildsettings.warnings.find(e => e.user === userID).warns.length == guildsettings.autoban) msg.guild.members.fetch().then(e => e.get(userID).ban({reason: 'Auto ban by ' + client.user.tag}) .catch(err => {}));
-
-      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
-
-      successMessage(msg.channel, `Warned **${client.users.resolve(userID).tag}** (${userID}) with reason **${useReason ? reason : "No reason provided."}**!`);
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'delwarn')) {
-      if(!msg.member.hasPermission('ADMINISTRATOR')) {
-        if(!botDevelopers.includes(msg.member.id)) {
-          permissionDenied(msg.channel, "ADMINISTRATOR");
-          return;
-        }
-      }
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}delwarn\x1b[0m.`);
-      let args = msg.content.split(' ');
-      if(args.length < 3) {
-        errorMessage(msg.channel, 'Usage: ' + prefix + 'delwarn <UserID>|<@User> <WarningID>');
-        return;
-      }
-      let userID = args[1].replace('<@!', '').replace('<@', '').replace('>', '');
-      if(!/[0-9]*$/.test(userID)) return errorMessage(msg.channel, 'Invalid user provided!');
-      if(!/[0-9]*$/.test(args[2])) return errorMessage(msg.channel, 'Invalid warning ID!');
-      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-      if(!guildsettings.warnings.find(e => e.user === userID)) return errorMessage(msg.channel, 'This user has no warnings!');
-      let warnUser = guildsettings.warnings.find(e => e.user === userID);
-      if(args[2] > 0 && args[2] <= warnUser.warns.length) {
-        let warnID = args[2]-1;
-        warnUser.warns.splice(warnID, 1);
-        fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
-        successMessage(msg.channel, `Removed warning with ID **${warnID+1}** from **${client.users.resolve(userID).tag}** (${userID})!`);
-      } else return errorMessage(msg.channel, 'Invalid warning ID!');
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'autokick')) {
-      if(!msg.member.hasPermission('ADMINISTRATOR')) {
-        if(!botDevelopers.includes(msg.member.id)) {
-          permissionDenied(msg.channel, "ADMINISTRATOR");
-          return;
-        }
-      }
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}autokick\x1b[0m.`);
-      let args = msg.content.split(' ');
-      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-      if(args.length < 2) {
-        successMessage(msg.channel, `Warnings until kick: **${guildsettings.autokick}**`);
-        return;
-      }
-      if(!/^[0-9]*$/.test(args[1]) && args[1].toLowerCase() !== 'none') return errorMessage(msg.channel, 'Invalid number!')
-      let autokick;
-      if(args[1].toLowerCase() === 'none') {
-        autokick = 0;
-      } else autokick = parseInt(args[1]);
-      if(autokick < 0) autokick = 0;
-      if(autokick > 500) autokick = 500;
-      guildsettings.autokick = autokick;
-      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
-      successMessage(msg.channel, `Set warnings until kick to **${autokick}**!`);
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'autoban')) {
-      if(!msg.member.hasPermission('ADMINISTRATOR')) {
-        if(!botDevelopers.includes(msg.member.id)) {
-          permissionDenied(msg.channel, "ADMINISTRATOR");
-          return;
-        }
-      }
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}autoban\x1b[0m.`);
-      let args = msg.content.split(' ');
-      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-      if(args.length < 2) {
-        successMessage(msg.channel, `Warnings until ban: **${guildsettings.autoban}**`);
-        return;
-      }
-      if(!/^[0-9]*$/.test(args[1]) && args[1].toLowerCase() !== 'none') return errorMessage(msg.channel, 'Invalid number!')
-      let autoban;
-      if(args[1].toLowerCase() === 'none') {
-        autoban = 0;
-      } else autoban = parseInt(args[1]);
-      if(autoban < 0) autoban = 0;
-      if(autoban > 500) autoban = 500;
-      guildsettings.autoban = autoban;
-      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
-      successMessage(msg.channel, `Set warnings until ban to **${autoban}**!`);
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'store')) {
-        if(JSON.parse(fs.readFileSync(filename)).store == null) {
-            errorMessage(msg.channel, 'This server has no store');
-        }
-        else {
-            console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}store\x1b[0m.`);
-            msg.channel.send({ embed: {
-                title: "Click Here to go to the server's store!",
-                url: JSON.parse(fs.readFileSync(filename)).store,
-                color: `0x${msg.guild.me.displayHexColor.substring(1)}`
-            } });
-        }
-    }
-    else if (msg.content.toLowerCase().startsWith(prefix + 'setstore')) {
-      if(!msg.member.hasPermission('ADMINISTRATOR')) {
-        if(!botDevelopers.includes(msg.member.id)) {
-          permissionDenied(msg.channel, "ADMINISTRATOR");
-          return;
-        }
-      }
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}setstore\x1b[0m.`);
-      let args = msg.content.split(' ');
-      if(args.length < 2) return errorMessage(msg.channel, 'Usage: ' + prefix + 'setstore <URL>');
-      if(args[1].toLowerCase().startsWith('none')) {
-        let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-        guildsettings.store = null;
-        fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
-        successMessage(msg.channel, 'Server store reset!');
-        return;
-      }
-      if(!validateURl(args[1])) return errorMessage(msg.channel, 'Invalid URL!');
-      let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-      guildsettings.store = args[1].startsWith('http' || 'https') ? args[1] : `http://${args[1]}`;
-      fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
-      successMessage(msg.channel, 'Server store updated!');
-    }
-    else if (msg.content.toLowerCase().startsWith(prefix + 'rainbowrole')) {
-      if(!botDevelopers.includes(msg.member.id)) {
-        permissionDenied(msg.channel, "BOT_DEVELOPER");
-        return;
-      }
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}rainbowrole\x1b[0m.`);
-      if(msg.content.length < prefix.length+33) {
-        errorMessage(msg.channel, 'Invalid usage! Use: ' + prefix + 'rainbowrole <ROLE>');
-        return;
-      }
-      let guildData = JSON.parse(fs.readFileSync(filename));
-      msg.guild.roles.cache.find(role => role.id === msg.content.substring(prefix.length+15, prefix.length+33)).setColor(msg.guild.roles.cache.find(role => role.id === msg.content.substring(prefix.length+15, prefix.length+33)).color)
-      .then( () => {
-          for( var i = 0; i < guildData.rainbowRoles; i++) {
-              if(guildData.rainbowRoles[i] === msg.content.substring(prefix.length+15, prefix.length+33)) {
-                  guildData.rainbowRoles.splice(i, 1);
-                  fs.writeFileSync(filename, JSON.stringify(guildData, null, 2));
-                  successMessage(msg.channel, 'Rainbow role disabled!');
-                  return;
-              }
-          }
-          guildData.rainbowRoles.push(msg.content.substring(prefix.length+15, prefix.length+33));
-          successMessage(msg.channel, 'Enabled rainbow role for ' + msg.content.substring(prefix.length+12, prefix.length+33) + '>!');
-          fs.writeFileSync(filename, JSON.stringify(guildData, null, 2));
-      })
-      .catch((err) => {
-          if(err.message === "Missing Permissions") {
-            errorMessage(msg.channel, 'Sorry, I don\'t have permission to do that!');
-          } else {
-            errorMessage(msg.channel, 'An error has occurred! Please try again later.');
-          }
-      });
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'purge')) {
-      if(!msg.member.hasPermission('ADMINISTRATOR')) {
-        if(!botDevelopers.includes(msg.member.id)) {
-          permissionDenied(msg.channel, "ADMINISTRATOR");
-          return;
-        }
-      }
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}purge\x1b[0m.`);
-      let args = msg.content.toLowerCase().split(' ');
-      if(isNaN(parseInt(args[1]))) return errorMessage(msg.channel, 'Invalid number specified.');
-      if(parseInt(args[1]) > 100) return errorMessage(msg.channel, 'Number must be less than or equal to 100.');
-      
-      msg.channel.bulkDelete(parseInt(args[1])) .then(m => {
-        successMessage(msg.channel, `Successfully deleted ${args[1]} messages!`);
-      }) .catch(err => errorMessage(msg.channel, 'ERROR: ' + err));
-    }
-    else if (msg.content.toLowerCase().startsWith(prefix + 'info')) {
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}info\x1b[0m.`);
-      let developerServers = [];
-      let goldServers = [];
-      let silverServers = [];
-      let bronzeServers = [];
-
-      client.guilds.cache.forEach(g => {
-        botDevelopers.forEach(dev => {
-          let isDevGuild = true;
-          g.members.fetch(dev) .catch(err => {
-            if(err.message === 'Unknown Member') isDevGuild = false;
-          })
-          if(developerServers.includes(g.id)) return;
-          if(isDevGuild) {
-            developerServers[developerServers.length] = g.id;
-          }
-        });
-        if(premiumAPI.guildIsGold(g.id) && !developerServers.includes(g.id)) {
-          goldServers[goldServers.length] = g.id;
-          return;
-        }
-        if(premiumAPI.guildIsSilver(g.id) && !developerServers.includes(g.id)) {
-          silverServers[silverServers.length] = g.id;
-          return;
-        }
-        if(premiumAPI.guildIsBronze(g.id) && !developerServers.includes(g.id)) {
-          bronzeServers[bronzeServers.length] = g.id;
-        }
-      });
-      msg.channel.send({embed: {
-          title: "Vapor Stats",
-          color: '0x' + msg.guild.me.displayHexColor.substring(1),
-          author: {
-              name: msg.author.tag,
-              icon_url: msg.author.avatarURL()
-          },
-          thumbnail: {
-              url: client.user.avatarURL()
-          },
-          fields: [
-              {
-                  name: "Guild Count: **" + client.guilds.cache.size + "**",
-                  value: "*.*"
-              },
-              {
-                  name: "Vapor Bronze (Free) Guild Count: **" + bronzeServers.length + "**",
-                  value: "*.*"
-              },
-              {
-                  name: "Vapor Silver Guild Count: **" + silverServers.length + "**",
-                  value: "*.*"
-              },
-              {
-                  name: "Vapor Gold Guild Count: **" + goldServers.length + "**",
-                  value: "*.*"
-              },
-              {
-                  name: "Vapor Developer Guild Count: **" + developerServers.length + "**",
-                  value: "*.*"
-              },
-              {
-                  name: "Developer Accounts: **" + botDevelopers.length + "**",
-                  value: "*.*"
-              },
-              {
-                  name: "This Guild's Type: **" + premiumAPI.getGuildType(msg.guild.id, client) + "**",
-                  value: "*.*"
-              }
-          ],
-          timestamp: new Date()
-      }});
-      msg.channel.send({embed: {
-        title: "Need Help?",
-            color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
-            description: "Join our support server! [\[link\]](https://discord.gg/ptg4EC9eyA)",
-            author: {
-                name: msg.author.tag,
-                icon_url: msg.author.avatarURL()
-            },
-            thumbnail: {
-                url: client.user.avatarURL()
-            },
-            timestamp: new Date()
-      }});
-    }
-    else if (msg.content.toLowerCase().startsWith(prefix + 'passwordprotect')) {
-      // console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}passwordprotect\x1b[0m.`);
-      /*if(!msg.member.hasPermission('ADMINISTRATOR')) {
-        if(!botDevelopers.includes(msg.member.id)) {
-          permissionDenied(msg.channel, "ADMINISTRATOR");
-          return;
-        }
-      }
-      msg.channel.send('Please enter the channel where you want to accept passwords:');
-      msg.channel.awaitMessages(m => m.author.id == msg.author.id, {max: 1, time: 60000}) .then(collected => {
-        msg.channel.send(collected.first().content);
-      }) .catch(() => {
-        msg.channel.send('Operation timed out.');
-      });*/
-      errorMessage(msg.channel, 'This concept is too in-production to even have a developer version. Please check back later.');
-    }
-    else if (msg.content.toLowerCase().startsWith(prefix + 'dev')) {
-      if(!botDevelopers.includes(msg.member.id)) {
-        return;
-      }
-      if(msg.content.length < prefix.length+5) {
-        msg.channel.send('Usage: ' + prefix + 'dev <argument>');
-        return;
-      }
-      let args = msg.content.toLowerCase().substring(prefix.length+4).split(' ');
-      switch(args[0]) {
-        case 'guildsettings':
-          msg.channel.send('```json\n' + fs.readFileSync(filename) + '```');
-          break;
-        case 'add':
-          if(args.length > 1) {
-            if(/^[0-9]*$/.test(args[1])) {
-              botDevelopers.push(args[1]);
-              let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
-              if(botSettings.botDevelopers.includes(args[1])) {
-                msg.channel.send('User is already a bot developer!');
-                return;
-              }
-              botSettings.botDevelopers = botDevelopers;
-              fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings,null,2));
-              msg.channel.send('Added user as bot developer!');
-              let userID = args[1];
-              developerEmitter.emit('devAdded', userID);
-            } else if(/^\<\@/.test(args[1])) {
-              let userId;
-              if(args[1].substring(2).startsWith('!')) {
-                userId = args[1].substring(3, args[1].length-1);
-              } else { userId = args[1].substring(2, args[1].length-1); }
-              botDevelopers.push(userId);
-              let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
-              if(botSettings.botDevelopers.includes(userId)) {
-                msg.channel.send('User is already a bot developer!');
-                return;
-              }
-              botSettings.botDevelopers = botDevelopers;
-              fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings,null,2));
-              msg.channel.send('Added user as bot developer!');
-              developerEmitter.emit('devAdded', userId);
-            } else {
-              msg.channel.send('Usage: ' + prefix + 'dev add <UserID>|<UserMention>');
-            }
-          }
-          else {
-            msg.channel.send('Usage: ' + prefix + 'dev add <UserID>|<UserMention>');
-          }
-          break;
-        case 'remove':
-          if(args.length > 1) {
-            if(args[1] == '740167253491843094' || args[1].substring(2,args[1].length-1) == '740167253491843094') {
-              msg.channel.send('You can\'t remove developer permissions from the owner of the bot!');
-              return;
-            }
-            if(/^[0-9]*$/.test(args[1])) {
-              let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
-              if(!botSettings.botDevelopers.includes(args[1])) {
-                msg.channel.send('User is not a bot developer!');
-                return;
-              }
-              for(var i = 0; i < botSettings.botDevelopers.length; i++) {
-                if(botSettings.botDevelopers[i] == args[1]) {
-                  botSettings.botDevelopers.splice(i, 1);
-                  fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings, null, 2));
-                  msg.channel.send('Removed user from bot developers!');
-                  developerEmitter.emit('devRemoved', args[1]);
-                  return;
-                }
-              }
-            } else if(/^\<\@/.test(args[1])) {
-              let userId;
-              if(args[1].startsWith('!')) {
-                userId = args[1].substring(3, args[1].length-1);
-              } else { userId = args[1].substring(3, args[1].length-1); }
-              let botSettings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
-              if(!botSettings.botDevelopers.includes(userId)) {
-                msg.channel.send('User is not a bot devleoper!');
-                return;
-              }
-              for(var i = 0; i < botSettings.botDevelopers.length; i++) {
-                if(botSettings.botDevelopers[i] == userId) {
-                  botSettings.botDevelopers.splice(i, 1);
-                  fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(botSettings, null, 2));
-                  msg.channel.send('Removed user from bot developers!');
-                  developerEmitter.emit('devRemoved', userId);
-                  return;
-                }
-              }
-            }
-            else {
-              msg.channel.send('Usage: ' + prefix + 'dev remove <UserID>|<UserMention>');
-            }
-          }
-          else {
-            msg.channel.send('Usage: ' + prefix + 'dev remove <UserID>|<UserMention>');
-          }
-          break;
-        case 'list':
-          let message = 'Bot developers:\n';
-          for(var i = 0; i < botDevelopers.length; i++) {
-            message += '<@' + botDevelopers[i] + '> | ID: ' + botDevelopers[i] + '\n';
-          }
-          msg.channel.send(message);
-          break;
-        case 'updatechannel':
-          updateAPI.setUpdateChannel(msg.channel.id, msg.guild.id);
-          msg.channel.send('This channel will now receive update logs!');
-          break;
-        case 'role':
-          if(args.length < 2) return msg.channel.send('Usage: ' + prefix + 'dev role <RoleID>|<RoleMention>');
-          let guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-          let role = args[1].replace('<&', '').replace('>', '');
-          if(role === 'none') {
-            let devrole = guildsettings.devRole;
-            guildsettings.devRole = null;
-            fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
-            developerEmitter.emit('devRoleRemoved', msg.guild.id, devrole);
-            return;
-          }
-          let roleIsValid = (msg.guild.roles.cache.get(role));
-
-          if(!roleIsValid) return msg.channel.send('Invalid Role!');
-          let oldRole = guildsettings.devRole;
-          guildsettings.devRole = role;
-          fs.writeFileSync(`${msg.guild.id}.json`, JSON.stringify(guildsettings, null, 2));
-          msg.channel.send(`Set developer role to **${msg.guild.roles.cache.get(role).name}**!`);
-          developerEmitter.emit('devRoleUpdated', msg.guild.id, role, oldRole);
-          break;
-        case 'help':
-          msg.channel.send({ embed: {
-              title: "Vapor Developer Options",
-              color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
-              author: {
-                  name: msg.author.tag,
-                  icon_url: msg.author.avatarURL()
-              },
-              thumbnail: {
-                  url: client.user.avatarURL()
-              },
-              fields: [
-                  {
-                      name: prefix + "dev help",
-                      value: "Displays this message."
-                  },
-                  {
-                      name: prefix + "dev list",
-                      value: "Lists developer accounts."
-                  },
-                  {
-                      name: prefix + "dev add",
-                      value: "Adds a developer account."
-                  },
-                  {
-                      name: prefix + "dev remove",
-                      value: "Removes a developer account."
-                  },
-                  {
-                      name: prefix + "dev guildsettings",
-                      value: "Displays the guild's settings."
-                  },
-                  {
-                      name: prefix + "rainbowrole",
-                      value: "Toggles rainbow roles."
-                  }
-              ],
-              timestamp: new Date()
-          }});
-          break;
-        default:
-          msg.channel.send('Usage: ' + prefix + 'dev <argument>');
-          break;
-      }
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'stop')) {
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}stop\x1b[0m.`);
-      //errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
-      if(msg.guild.me.voice.channel) if(msg.member.voice.channel.id == msg.guild.me.voice.channel.id) {
-        if(msg.guild.me.voice.connection) {
-          let stopSong = musicBotAPI.stop(msg.channel);
-          if(stopSong) successMessage(msg.channel, 'Successfully stopped the playback!');
-        }
-        else errorMessage(msg.channel, 'Nothing to stop!');
-      } else errorMessage(msg.channel, 'You are not in the bot\'s voice channel!');
-      else errorMessage(msg.channel, 'You are not in the bot\'s voice channel!');
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'pause')) {
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}pause\x1b[0m.`);
-      if(!msg.guild.me.voice.channel) return errorMessage(msg.channel, 'I am not in a voice channel!');
-      if(!msg.guild.me.voice.connection.dispatcher) return errorMessage(msg.channel, 'Nothing playing!');
-      if(msg.guild.me.voice.channel) if(msg.member.voice.channel.id == msg.guild.me.voice.channel.id) {
-        if(msg.guild.me.voice.connection.dispatcher) musicBotAPI.pause(msg.guild.me.voice.connection);
-        else errorMessage(msg.channel, 'Nothing to pause!');
-        if(msg.guild.me.voice.connection.dispatcher.paused) successMessage(msg.channel, 'Paused playback.');
-        else successMessage(msg.channel, 'Resumed playback.');
-      } else errorMessage(msg.channel, 'You are not in the my voice channel!');
-      else errorMessage(msg.channel, 'You are not in the my voice channel!');
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'skip')) {
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}skip\x1b[0m.`);
-      if(!msg.guild.me.voice.channelID) {
-        return errorMessage(msg.channel, 'I am not in a voice channel!');
-      }
-      if(!msg.member.voice.channelID) {
-        return errorMessage(msg.channel, 'You are not in my voice channel!');
-      }
-      if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) {
-        return errorMessage(msg.channel, 'You are not in my voice channel!');
-      }
-      if(!msg.guild.me.voice.connection.dispatcher) return errorMessage(msg.channel, 'I am not playing anything!');
-      msg.guild.me.voice.connection.dispatcher.end();
-      successMessage(msg.channel, 'Skipped track!');
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'add')) {
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}add\x1b[0m.`);
-      //errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
-      var guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-      let args = msg.content.split(' ');
-      let query;
-      if(args.length < 2) {
-        if(!msg.guild.me.voice.channelID) return errorMessage(msg.channel, 'Usage: ' + prefix + 'add <Query>');
-        if(!msg.member.voice.channelID) return errorMessage(msg.channel, 'You are not in my voice channel!');
-        if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return errorMessage(msg.channel, 'You are not in my voice channel!');
-        if(!msg.guild.me.voice.connection) return errorMessage(msg.channel, 'An unknown error occured. If the bot is in a voice channel, please disconnect it using admin and try again.');
-      }
-      let newArgs = args;
-      newArgs.splice(0, 1);
-      query = newArgs.join(' ');
-      if(!msg.guild.me.voice.connection) {
-        if(!msg.member.voice.channel) return errorMessage('You are not in a voice channel!');
-        msg.member.voice.channel.join() .then(c => {
-          c.voice.setSelfDeaf(true);
-          let guildsettings = getGuildSettings(msg.guild.id);
-          guildsettings.loopType = null;
-          setGuildSettings(msg.guild.id, guildsettings);
-          c.on('disconnect', () => {
-            musicBotAPI.resetQueue(msg.guild.id);
-          })
-        }) .catch(err => errorMessage(msg.channel, "ERROR: " + err));
-      } else {
-        if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return errorMessage(msg.channel, 'You are not in my voice channel!');
-      }
-      musicBotAPI.play(msg.channel, query, false);
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'remove')) {
-      //errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}remove\x1b[0m.`);
-      if(!msg.guild.me.voice.channel) return errorMessage(msg.channel, 'I am not in a voice channel!');
-      if(!msg.member.voice.channel) return errorMessage(msg.channel, 'You are not in my voice channel!');
-      if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return errorMessage(msg.channel, 'You are not in my voice channel!');
-      let args = msg.content.split(' ');
-      if(args.length < 2) return errorMessage(msg.channel, 'Invalid song ID!');
-      if(isNaN(parseInt(args[1]-1))) return errorMessage(msg.channel, 'Invalid song ID!');
-      if(parseInt(args[1]-1) <= -1) return errorMessage(msg.channel, 'Invalid song ID!');
-      let remove = musicBotAPI.remove(msg.guild.me.voice.connection, parseInt(args[1]-1));
-      if(remove) successMessage(msg.channel, 'Removed song **' + args[1] + '** from the queue!');
-      else errorMessage(msg.channel, 'Invalid song ID!');
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'disconnect') || msg.content.toLowerCase().startsWith(prefix + 'dc')) {
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}disconnect\x1b[0m.`);
-      //errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
-      if(!msg.guild.me.voice.channel) return errorMessage(msg.channel, 'I am not in a voice channel!');
-      if(!msg.member.voice.channel) return errorMessage(msg.channel, 'You are not in a voice channel!');
-      if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return errorMessage(msg.channel, 'I am not in your voice channel!');
-      musicBotAPI.resetQueue(msg.guild.id);
-      msg.guild.voice.channel.leave();
-      successMessage(msg.channel, 'I left your voice channel!');
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'join')) {
-      //errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}join\x1b[0m.`);
-      if(msg.guild.me.voice.channel) return errorMessage(msg.channel, 'I\'m already in a voice channel!');
-      if(!msg.member.voice.channel) return errorMessage(msg.channel, 'You are not in a voice channel!');
-      msg.member.voice.channel.join() .then(c => {
-        
-        let guildsettings = getGuildSettings(msg.guild.id);
-        guildsettings.loopType = null;
-        setGuildSettings(msg.guild.id, guildsettings);
-        c.on('disconnect', () => {
-          c.voice.setSelfDeaf(true);
-          musicBotAPI.resetQueue(msg.guild.id);
-        });
-      }) .catch(err => errorMessage(msg.channel, "ERROR: " + err));
-      successMessage(msg.channel, 'Joined your voice channel!');
-      musicBotTmeouts[msg.guild.id] = setTimeout(() => {
-        if(getGuildSettings(msg.guild.id).twentyFourSeven) return musicBotTmeouts[msg.guild.id] = null;
-        try { msg.guild.me.voice.connection.disconnect(); }
-        catch (err) {}
-        errorMessage(c, 'I have left your channel because of inactivity! Type ' + prefix + '24/7 to get rid of this.');
-      }, 10 * 60 * 1000);
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + '24/7')) {
-      let allowedTypes = ['Silver', 'Gold', 'Developer'];
-      if(!allowedTypes.includes(premiumAPI.getGuildType(msg.guild.id, client))) return errorMessage(msg.channel, 'You need *Vapor Silver* or *Vapor Gold* to use this feature!');
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}24/7\x1b[0m.`);
-      if(msg.guild.me.voice.channelID !== msg.member.voice.channelID) return errorMessage(msg.channel, 'You are not in my voice channel!');
-      let args = msg.content.toLowerCase().split(' ');
-      var guildsettings = getGuildSettings(msg.guild.id);
-      if(args.length == 1) {
-        if(guildsettings.twentyFourSeven) {
-          guildsettings.twentyFourSeven = 0;
-          setGuildSettings(msg.guild.id, guildsettings);
-          successMessage(msg.channel, '24/7 is now OFF.');
-        } else {
-          guildsettings.twentyFourSeven = 1;
-          setGuildSettings(msg.guild.id, guildsettings);
-          successMessage(msg.channel, '24/7 is now ON.');
-        }
-      } else {
-        switch(args[1]) {
-          case 'on':
-          case 'yes':
-            guildsettings.twentyFourSeven = 1;
-            setGuildSettings(msg.guild.id, guildsettings);
-            successMessage(msg.channel, '24/7 is now ON.');
-            break;
-          case 'off':
-          case 'no':
-            guildsettings.twentyFourSeven = 0;
-            setGuildSettings(msg.guild.id, guildsettings);
-            successMessage(msg.channel, '24/7 is now OFF.');
-            break;
-          default:
-            if(guildsettings.twentyFourSeven) {
-              guildsettings.twentyFourSeven = 0;
-              setGuildSettings(msg.guild.id, guildsettings);
-              successMessage(msg.channel, '24/7 is now OFF.');
-            } else {
-              guildsettings.twentyFourSeven = 1;
-              setGuildSettings(msg.guild.id, guildsettings);
-              successMessage(msg.channel, '24/7 is now ON.');
-            }
-            break
-        }
-      }
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'loop')) {
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}loop\x1b[0m.`);
-      if(msg.guild.me.voice.channelID !== msg.member.voice.channelID) return errorMessage(msg.channel, 'You are not in my voice channel!');
-      let args = msg.content.toLowerCase().split(' ');
-      let guildsettings = getGuildSettings(msg.guild.id);
-      if(args.length == 1) {
-        switch(guildsettings.loopType) {
-          case null:
-            guildsettings.loopType = 'song';
-            break;
-          case 'song':
-            guildsettings.loopType = 'queue';
-            break;
-          case 'queue':
-            guildsettings.loopType = null;
-            break;
-        }
-        setGuildSettings(msg.guild.id, guildsettings);
-        successMessage(msg.channel, `Set loop to ${guildsettings.loopType ? guildsettings.loopType.toUpperCase() : 'NONE'}.`);
-      } else {
-        switch(args[1]) {
-          case 'none':
-            guildsettings.loopType = null;
-            break;
-          case 'song':
-            guildsettings.loopType = 'song';
-            break;
-          case 'queue':
-            guildsettings.loopType = 'queue';
-            break;
-        }
-        setGuildSettings(msg.guild.id, guildsettings);
-        successMessage(msg.channel, `Set loop to ${guildsettings.loopType ? guildsettings.loopType.toUpperCase() : 'NONE'}.`);
-      }
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'invite')) {
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}invite\x1b[0m.`);
-      msg.channel.send( { embed: {
-        title: "Invite Vapor",
-        color: "0x" + msg.guild.me.displayHexColor.substring(1),
-        author: {
-            name: msg.author.tag,
-            icon_url: msg.author.avatarURL()
-        },
-        thumbnail: {
-            url: client.user.avatarURL()
-        },
-        description: "[Click Here](http://discord.com/oauth2/authorize?client_id=" + client.user.id + "&scope=bot&permissions=8) to invite Vapor to your server."
-      } } );
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'lyrics')) {
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix + 'lyrics'}\x1b[0m.`);
-      let args = msg.content.split(' ');
-      if(args.length < 2) return errorMessage(msg.channel, 'Usage: ' + prefix + 'lyrics <Query>');
-      else {
-        args.shift();
-        let query = args.join(' ');
-        az.getLyric(query.charAt(0).toUpperCase() + query.substring(1)).then(ly => {
-          if(ly.join(' ').length < 2048) {
-            msg.channel.send({ embed: {
-              title: "Lyrics:",
-              color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
-              author: {
-                name: msg.author.tag,
-                icon_url: msg.author.avatarURL()
-              },
-              thumbnail: {
-                url: client.user.avatarURL()
-              },
-              description: ly.join('\n')
-            } });
-          } else {
-            let lyrics = splitText(ly.join('\n'), 2048);
-            msg.channel.send({ embed: {
-              title: "Lyrics:",
-              color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
-              author: {
-                  name: msg.author.tag,
-                  icon_url: msg.author.avatarURL()
-              },
-              thumbnail: {
-                  url: client.user.avatarURL()
-              },
-              description: lyrics[0]
-            } });
-            lyrics.shift();
-            for(var i=0; i < lyrics.length; i++) {
-              if(lyrics.length -1 == i) {
-                msg.channel.send({ embed: {
-                  color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
-                  footer: {
-                    icon_url: msg.author.avatarURL(),
-                    text: "Requested by " + msg.author.tag
-                  },
-                  description: lyrics[i]
-                } });
-              } else {
-                msg.channel.send({ embed: {
-                  color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
-                  description: lyrics[i]
-                } });
-              }
-            }
-          }
-        }) .catch(err => { errorMessage(msg.channel, 'Nothing found.'); });
-      } 
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'ping')) {
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix + 'ping'}\x1b[0m.`);
-      msg.channel.send({ embed: {
-        title: ":ping_pong: Bot Latency",
-        color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
-        description: `${Date.now() - msg.createdTimestamp} ms`,
-        fields: [
-          {
-              name: "API Latency:",
-              value: Math.round(client.ws.ping) + " ms"
-          }
-        ]
-      } })
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'nowplaying') || msg.content.toLowerCase().startsWith(prefix + 'np')) {
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix + 'nowplaying'}\x1b[0m.`);
-      if(!msg.guild.me.voice.connection) return errorMessage(msg.channel, 'I am not playing anything!');
-      if(!msg.guild.me.voice.connection.dispatcher) return errorMessage(msg.channel, 'I am not playing anything!');
-      let guildsettings = getGuildSettings(msg.guild.id);
-      let playTime = Math.round(msg.guild.me.voice.connection.dispatcher.totalStreamTime /1000);
-      ytdl.getInfo(guildsettings.musicQueue[guildsettings.nowPlaying].url) .then(vid => {
-        let videoLength = vid.videoDetails.lengthSeconds;
-        let guiMsg = "";
-        let percent = roundToNearest5(playTime/videoLength*100);
-        for(let i=0; i < 20; i++) {
-          let frag = percent/100*20;
-          if(frag == i) {
-            guiMsg += ":small_blue_diamond:";
-          } else {
-            guiMsg += "=";
-          }
-        }
-        let timings = [
-          {
-            s: Math.floor(playTime/60/60 % 1 *60 % 1 *60),
-            m: Math.floor(playTime/60/60 % 1 * 60),
-            h: Math.floor(playTime/60/60)
-          },
-          {
-            s: Math.floor(videoLength/60/60 % 1 *60 % 1 *60),
-            m: Math.floor(videoLength/60/60 % 1 *60),
-            h: Math.floor(videoLength/60/60)
-          }
-        ];
-        msg.channel.send({ embed: {
-          title: "Now Playing:",
-          description: "[" + guildsettings.musicQueue[guildsettings.nowPlaying].title + "](" + guildsettings.musicQueue[guildsettings.nowPlaying].url + ")",
-          fields: [
-            {
-                name: `${timings[0].h ? timings[0].h + ":" : ""}${timings[0].h && timings[0].m < 10 ? "0"+timings[0].m : timings[0].m}:${timings[0].s < 10 ? "0"+timings[0].s : timings[0].s} | ${timings[1].h ? timings[1].h + ":" : ""}${timings[1].h && timings[1].m < 10 ? "0"+timings[1].m : timings[1].m}:${timings[1].s}`,
-                value: guiMsg
-            }
-          ],
-          color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
-          footer: {
-            text: "Requested by " + msg.author.tag,
-            icon_url: msg.author.avatarURL()
-          }
-        } });
-      }) .catch(e => console.log(e));
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'play') || msg.content.toLowerCase().startsWith(prefix + 'p')) {
-      var guildsettings = JSON.parse(fs.readFileSync(`${msg.guild.id}.json`));
-      let args = msg.content.split(' ');
-      let query;
-      if(args[0] !== prefix+'play' && args[0] !== prefix+'p') return;
-      if(args.length < 2) {
-        if(!msg.guild.me.voice.channelID) return errorMessage(msg.channel, 'Usage: ' + prefix + 'play <Query>');
-        if(!msg.member.voice.channelID) return errorMessage(msg.channel, 'You are not in my voice channel!');
-        if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return errorMessage(msg.channel, 'You are not in my voice channel!');
-        if(!msg.guild.me.voice.connection) return errorMessage(msg.channel, 'An unknown error occured. If the bot is in a voice channel, please disconnect it using admin and try again.');
-        if(!msg.guild.me.voice.connection.dispatcher) return errorMessage(msg.channel, 'Usage: ' + prefix + 'play <Query>');
-        if(msg.guild.me.voice.connection.dispatcher.paused) {
-          msg.guild.me.voice.connection.dispatcher.resume();
-          successMessage(msg.channel, 'Resumed playback.');
-        }
-      }
-      let newArgs = args;
-      newArgs.splice(0, 1);
-      query = newArgs.join(' ');
-      if(!msg.guild.me.voice.connection) {
-        if(!msg.member.voice.channel) return errorMessage(msg.channel, 'You are not in a voice channel!');
-        msg.member.voice.channel.join() .then(c => {
-          c.voice.setSelfDeaf(true);
-          let guildsettings = getGuildSettings(msg.guild.id);
-          guildsettings.loopType = null;
-          setGuildSettings(msg.guild.id, guildsettings);
-          c.on('disconnect', () => {
-            musicBotAPI.resetQueue(msg.guild.id);
-          })
-        }) .catch(err => errorMessage(msg.channel, "ERROR: " + err));
-      } else {
-        if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return errorMessage(msg.channel, 'You are not in my voice channel!');
-      }
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}play\x1b[0m.`);
-      musicBotAPI.play(msg.channel, query, true);
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'queue') || msg.content.toLowerCase().startsWith(prefix + 'q')) {
-      //errorMessage(msg.channel, 'Command is still in early development! Please check back later.');
-      let queue = musicBotAPI.fetchQueue(msg.guild.id);
-      let args = msg.content.toLowerCase().split(' ');
-      if(args[0] !== prefix+'queue' && args[0] !== prefix+'q') return;
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}queue\x1b[0m.`);
-      if(args.length > 1) {
-        if(args[1] == 'clear') {
-          let guildsettings = getGuildSettings(msg.guild.id);
-          if(!guildsettings.musicQueue) return;
-          guildsettings.musicQueue = [];
-          guildsettings.nowPlaying = null;
-          guildsettings.lastPlayed = null;
-          setGuildSettings(msg.guild.id, guildsettings);
-          return successMessage(msg.channel, 'Cleared the queue!');
-        }
-      }
-      if(queue) {
-        if(queue.length > 0) {
-          let queueFields = [];
-          for(var i=0; i<queue.length; i++) {
-            queueFields[queueFields.length] = {
-              name: "Position in queue: " + (i+1),
-              value: `${getGuildSettings(msg.guild.id).nowPlaying == i ? ":arrow_forward: " : ""}` + "[" + queue[i].title + "](" + queue[i].url + ")"
-            }
-          }
-          msg.channel.send({ embed: {
-            title: "Current Queue:",
-            color: `0x${msg.guild.me.displayHexColor.substring(1)}`,
-            fields: queueFields,
-            footer: {
-              text: "Requested by " + msg.author.tag + " | Loop: " + (getGuildSettings(msg.guild.id).loopType ? getGuildSettings(msg.guild.id).loopType : "none"),
-              icon_url: msg.author.avatarURL()
-            }
-          } });
-        } else errorMessage(msg.channel, 'There is nothing in the queue!');
-      } else errorMessage(msg.channel, 'There is nothing in the queue!');
-    }
-    else if(msg.content.toLowerCase().startsWith(prefix + 'giveaway') || msg.content.toLowerCase().startsWith(prefix + 'g')) {
-      let args = msg.content.toLowerCase().split(' ');
-      if(args[0] !== prefix+'giveaway' && args[0] !== prefix+'g') return;
-      console.log(`\x1b[35m[Commands] \x1b[36m${msg.author.tag} \x1b[0mexecuted \x1b[36m${prefix}giveaway\x1b[0m.`);
-      let giveawayhelp = { embed: {
-        title: "Giveaway Help",
-        color: "0x" + msg.guild.me.displayHexColor.substring(1),
-        author: {
-            name: msg.author.tag,
-            icon_url: msg.author.avatarURL()
-        },
-        thumbnail: {
-            url: client.user.avatarURL()
-        },
-        fields: [
-            {
-                name: prefix + "g help",
-                value: "Displays this menu."
-            },
-            {
-                name: prefix + "g create",
-                value: "Create a giveaway."
-            },
-            {
-                name: prefix + "g list",
-                value: "List all giveaways."
-            },
-            {
-                name: prefix + "g reroll",
-                value: "Reroll giveaway."
-            },
-            {
-                name: prefix + "g remove",
-                value: "Remove giveaway."
-            }
-        ]
-      } };
-      if(args.length == 1) {
-        
-      } else {
-
-      }
-    }
+    if(!msg.member.user.bot && msg.guild) execute(msg);
 });
 
-developerEmitter.on('devRemoved', (userID) => {
-  client.guilds.cache.forEach(g => {
-    let userResolvable = g.members.fetch(userID) .catch(err => {});
-    let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
-    if(userResolvable && guildsettings.devRole) {
-      userResolvable.then(user => {
-        user.roles.remove(guildsettings.devRole, "Vapor Developer automatical removal.");
-      });
-    }
-  });
-});
-
-developerEmitter.on('devAdded', (userID) => {
-  client.guilds.cache.forEach(g => {
-    let userResolvable = g.members.fetch(userID) .catch(err => {});
-    let guildsettings = JSON.parse(fs.readFileSync(`${g.id}.json`));
-    if(userResolvable && guildsettings.devRole) {
-      userResolvable.then(user => {
-        user.roles.add(guildsettings.devRole, "Vapor Developer automatical grant.");
-      });
-    }
-  });
-});
-
-developerEmitter.on('devRoleUpdated', (guildID, role, oldRole) => {
-  let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
-  client.guilds.fetch(guildID).then(guild => {
-    if(oldRole) {
-      botDevelopers.forEach(dev => {
-        guild.members.fetch(dev) .then(user => {
-          user.roles.remove(oldRole) .catch(err => {});
-          user.roles.add(role, "Vapor Developer automatical grant.") .catch(err => {});
-        }) .catch(err => {});
-      });
-    } else {
-      botDevelopers.forEach(dev => {
-        guild.members.fetch(dev) .then(user => {
-          user.roles.add(role, "Vapor Developer automatical grant.") .catch(err => {});
-        }) .catch(err => {});
-      });
-    }
-  }) .catch(err => {});
-});
-
-developerEmitter.on('devRoleRemoved', (guildID, devRoleID) => {
-  let botDevelopers = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH)).botDevelopers;
-  client.guilds.fetch(guildID) .then(guild => {
-    botDevelopers.forEach(dev => {
-      guild.members.fetch(dev) .then(member => {
-        member.roles.remove(devRoleID) .catch(err => {});
-      }) .catch(err => {});
-    });
-  }) .catch(err => {});
-});
-
-function permissionDenied(channel, permission) {
-  channel.send({embed: {
-    title: "You need **" + permission + "** to perform this action.",
-    color: "0xFF0000"
-  }})
+function permissionDeniedMsg(permission) {
+  return {
+    title: `You need ${permission} to do this!`,
+    color: 16711680 // Red but converted to decimal
+  }
 }
 
-function successMessage(channel, message) {
-  channel.send({embed: {
+function successMessage(message, color) {
+  return {
     title: message,
-    color: `0x${channel.guild.me.displayHexColor.substring(1)}`
-  }})
+    color: color
+  }
 }
 
-function errorMessage(channel, message) {
-  channel.send({embed: {
+function errorMessage(message) {
+  return {
     title: message,
-    color: "0xFF0000"
-  }}) .catch(err => {
-    checkError(err.message, channel);
-  })
+    color: 16711680 // Red but converted to decimal
+  }
 }
 
 function checkError(errMsg, channel) {
@@ -1710,3 +359,1518 @@ function splitText(str, size) {
 
   return chunks;
 }
+
+let execute = async (msg, args, interaction) => {
+  let guildsettings;
+  let settings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
+  let cmd = msg;
+  args = args || null;
+  interaction = interaction || null;
+  if(!interaction) {
+    guildsettings = getGuildSettings(msg.guild.id);
+    args = msg.content.toLowerCase().split(' ');
+    if(!args[0].startsWith(guildsettings.prefix)) return;
+    cmd = args[0].substring(guildsettings.prefix.length);
+    args.shift();
+    if(args.length == 0) args = null;
+  } else {
+    guildsettings = getGuildSettings(interaction.guild_id);
+  }
+  switch(cmd) {
+    case 'help':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m help command.');
+      if(args) {
+        if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m args exist.');
+        switch((interaction ? args[0].value : args[0])) {
+          case 'moderation':
+          case 'mod':
+            if(interaction) client.sendInteractionEmbed({
+              title: "Vapor Help (Moderation)",
+              color: client.guilds.resolve(interaction.guild_id).me.displayColor,
+              fields: [
+                {
+                  name: "/ban",
+                  value: "Ban a user."
+                },
+                {
+                  name: "/unban",
+                  value: "Unban a user."
+                },
+                {
+                  name: "/kick",
+                  value: "Kick a user."
+                },
+                {
+                  name: "/autoban",
+                  value: "Set amount of warnings until a user gets banned."
+                },
+                {
+                  name: "/autokick",
+                  value: "Set amount of warnings until a user gets kicked."
+                },
+                {
+                  name: "/warn",
+                  value: "Warn a user."
+                },
+                {
+                  name: "/delwarn",
+                  value: "Remove a warning from a user."
+                },
+                {
+                  name: "/warnings | /warns",
+                  value: "View warnings of a user."
+                },
+                {
+                  name: "/purge",
+                  value: "Remove amount of messages specified."
+                },
+                {
+                  name: "/setstore",
+                  value: "Set server donation link."
+                },
+                {
+                  name: "/setprefix",
+                  value: "Set bot's prefix."
+                }
+              ]
+            }, interaction.id, interaction.token);
+            else msg.reply({ embed: {
+              title: "Vapor Help (Moderation)",
+              color: msg.guild.me.displayColor,
+              fields: [
+                {
+                  name: guildsettings.prefix + "ban",
+                  value: "Ban a user."
+                },
+                {
+                  name: guildsettings.prefix + "unban",
+                  value: "Unban a user."
+                },
+                {
+                  name: guildsettings.prefix + "kick",
+                  value: "Kick a user."
+                },
+                {
+                  name: guildsettings.prefix + "autoban",
+                  value: "Set amount of warnings until a user gets banned."
+                },
+                {
+                  name: guildsettings.prefix + "autokick",
+                  value: "Set amount of warnings until a user gets kicked."
+                },
+                {
+                  name: guildsettings.prefix + "warn",
+                  value: "Warn a user."
+                },
+                {
+                  name: guildsettings.prefix + "delwarn",
+                  value: "Remove a warning from a user."
+                },
+                {
+                  name: guildsettings.prefix + "warnings | " + guildsettings.prefix + "warns",
+                  value: "View warnings of a user."
+                },
+                {
+                  name: guildsettings.prefix + "purge",
+                  value: "Remove amount of messages specified."
+                },
+                {
+                  name: guildsettings.prefix + "setstore",
+                  value: "Set server donation link."
+                },
+                {
+                  name: guildsettings.prefix + "setprefix",
+                  value: "Set bot's prefix."
+                }
+              ]
+            } });
+            break;
+          case 'music':
+          case 'mus':
+            if(interaction) client.sendInteractionEmbed({
+              title: "Vapor Help (Music)",
+              color: client.guilds.resolve(interaction.guild_id).me.displayColor,
+              fields: [
+                {
+                  name: "/play",
+                  value: "Play a song."
+                },
+                {
+                  name: "/pause",
+                  value: "Pause the current song."
+                },
+                {
+                  name: "/add",
+                  value: "Add to the queue."
+                },
+                {
+                  name: "/remove",
+                  value: "Remove from the queue."
+                },
+                {
+                  name: "/stop",
+                  value: "Stop the playback."
+                },
+                {
+                  name: "/queue",
+                  value: "View the queue."
+                },
+                {
+                  name: "/loop",
+                  value: "Change the loop type."
+                },
+                {
+                  name: "/24_7",
+                  value: "Make bot stay in voice without an inactivity timer."
+                },
+                {
+                  name: "/join",
+                  value: "Make the bot join your voice channel."
+                },
+                {
+                  name: "/disconnect",
+                  value: "Make the bot leave your voice channel."
+                }
+              ]
+            }, interaction.id, interaction.token);
+            else msg.reply({ embed: {
+              title: "Vapor Help (Music)",
+              color: msg.guild.me.displayColor,
+              fields: [
+                {
+                  name: guildsettings.prefix + "play | " + guildsettings.prefix + "p",
+                  value: "Play a song."
+                },
+                {
+                  name: guildsettings.prefix + "pause",
+                  value: "Pause the current song."
+                },
+                {
+                  name: guildsettings.prefix + "add",
+                  value: "Add to the queue."
+                },
+                {
+                  name: guildsettings.prefix + "remove",
+                  value: "Remove from the queue."
+                },
+                {
+                  name: guildsettings.prefix + "stop",
+                  value: "Stop the playback."
+                },
+                {
+                  name: guildsettings.prefix + "queue | " + guildsettings.prefix + "q",
+                  value: "View the queue."
+                },
+                {
+                  name: guildsettings.prefix + "loop",
+                  value: "Change the loop type."
+                },
+                {
+                  name: guildsettings.prefix + "24/7",
+                  value: "Make bot stay in voice without an inactivity timer."
+                },
+                {
+                  name: guildsettings.prefix + "join",
+                  value: "Make the bot join your voice channel."
+                },
+                {
+                  name: guildsettings.prefix + "disconnect | " + guildsettings.prefix + "dc",
+                  value: "Make the bot leave your voice channel."
+                }
+              ]
+            } });
+            break;
+          case 'miscellaneous':
+          case 'misc':
+            if(interaction) client.sendInteractionEmbed({
+              title: "Vapor Help (Misc)",
+              color: client.guilds.resolve(interaction.guild_id).me.displayColor,
+              fields: [
+                {
+                  name: "/store",
+                  value: "Go to the server's donation link."
+                },
+                {
+                  name: "/invite",
+                  value: "Invite the bot to your server."
+                },
+                {
+                  name: "/info",
+                  value: "Get Vapor's statistics."
+                },
+                {
+                  name: "/ping",
+                  value: "View Vapor's latency."
+                },
+                {
+                  name: "/dev",
+                  value: "Developer options."
+                }
+              ]
+            }, interaction.id, interaction.token);
+            else msg.reply({ embed: {
+              title: "Vapor Help (Misc)",
+              color: msg.guild.me.displayColor,
+              fields: [
+                {
+                  name: guildsettings.prefix + "store",
+                  value: "Go to the server's donation link."
+                },
+                {
+                  name: guildsettings.prefix + "invite",
+                  value: "Invite the bot to your server."
+                },
+                {
+                  name: guildsettings.prefix + "info",
+                  value: "Get Vapor's statistics."
+                },
+                {
+                  name: guildsettings.prefix + "ping",
+                  value: "View Vapor's latency."
+                },
+                {
+                  name: guildsettings.prefix + "dev",
+                  value: "Developer options."
+                }
+              ]
+            } });
+            break;
+        }
+      } else {
+        if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m no args.');
+        if(interaction != undefined) {
+          client.sendInteractionEmbed({
+            title: "Vapor Help",
+            color: client.guilds.resolve(interaction.guild_id).me.displayColor,
+            fields: [
+              {
+                  name: "/help moderation",
+                  value: "Shows moderation commands."
+              },
+              {
+                  name: "/help music",
+                  value: "Shows music commands."
+              },
+              {
+                  name: "/help miscellaneous",
+                  value: "Shows other commands not listed in any category."
+              }
+            ]
+          }, interaction.id, interaction.token);
+        } else msg.reply({ embed: {
+          title: "Vapor Help",
+          color: msg.guild.me.displayColor,
+          fields: [
+            {
+                name: guildsettings.prefix + "help moderation",
+                value: "Shows moderation commands."
+            },
+            {
+                name: guildsettings.prefix + "help music",
+                value: "Shows music commands."
+            },
+            {
+                name: guildsettings.prefix + "help miscellaneous",
+                value: "Shows other commands not listed in any category."
+            }
+          ]
+        } }) .catch(err => {});
+      }
+      break;
+    case 'setprefix':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m setprefix command.');
+      if(interaction) {
+        let member = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        if(!member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(member.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+        let newPrefix = args[0].value;
+        if(newPrefix.startsWith('/')) return client.sendInteractionEmbed(errorMessage('Prefix cannot start with **"/"**!', client.guilds.resolve(interaction.guild_id).me.displayColor), interaction.id, interaction.token);
+        guildsettings.prefix = newPrefix;
+        setGuildSettings(interaction.guild_id, guildsettings);
+        if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m prefix updated: ' + newPrefix);
+        client.sendInteractionEmbed(successMessage('Prefix set to ' + newPrefix, client.guilds.resolve(interaction.guild_id).me.displayColor), interaction.id, interaction.token);
+      } else {
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.member.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+        if(!args) return msg.reply({ embed: errorMessage('Usage: ' + guildsettings.prefix + 'setprefix <prefix>') });
+        if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m args exist.');
+        let newPrefix = args[0];
+        if(newPrefix.startsWith('/')) return msg.reply({ embed: errorMessage('Prefix cannot start with **"/"**!') });
+        guildsettings.prefix = newPrefix;
+        setGuildSettings(msg.guild.id, guildsettings);
+        if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m prefix updated: ' + newPrefix);
+        msg.reply({ embed: successMessage('Prefix set to ' + newPrefix, msg.guild.me.displayColor) });
+      }
+      break;
+    case 'ban':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m ban command.');
+      if(interaction) {
+        let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        let reason;
+        if(args[1]) reason = args[1].value;
+        else reason = `Banned by ${author.user.tag}`;
+        client.guilds.resolve(interaction.guild_id).members.fetch(args[0].value) .then (userToBan => {
+          if(!author.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+          if(userToBan.user.tag == author.user.tag) return client.sendInteractionEmbed(errorMessage('You cannot ban yourself!'), interaction.id, interaction.token);
+          if(userToBan.user.tag == client.user.tag) return client.sendInteractionEmbed(errorMessage('I cannot ban myself!'), interaction.id, interaction.token);
+
+          if(author.roles.highest.position > userToBan.roles.highest.position || settings.botDevelopers.includes(msg.author.id)) {
+            userToBan.ban({ reason: reason }) .then(() => {
+              if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m executed ban 1.');
+              client.sendInteractionEmbed(successMessage(`Banned **${userToBan.user.username}** (${userToBan.user.id}) with reason **${reason}**!`, author.guild.me.displayColor), interaction.id, interaction.token);
+            }) .catch(err => {
+              if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m failed ban 1.');
+              client.sendInteractionEmbed(errorMessage(`Couldn't ban user:\n${err.message}`), interaction.id, interaction.token);
+            });
+          } else client.sendInteractionEmbed(errorMessage('You do not have permission to ban this user!'), interaction.id, interaction.token);
+        }) .catch(err => {
+          if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m failed ban 1.');
+          author.guild.members.ban(args[0].value, { reason: reason }) .then(bannedUser => {
+            if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m executed ban 2.');
+            client.sendInteractionEmbed(successMessage(`Banned **${bannedUser.username}** (${bannedUser.id}) with reason **${reason}**!`, author.guild.me.displayColor), interaction.id, interaction.token);
+          }) .catch(e => {
+            if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m failed ban 2.');
+            client.sendInteractionEmbed(errorMessage(`Couldn't ban user:\n${e.message}`), interaction.id, interaction.token);
+          });
+        });
+      } else {
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+        if(args) {
+          let reason;
+          if(args.length > 1) {
+            reason = args.slice(0).join(' ');
+          } else reason = `Banned by ${msg.author.tag}`;
+
+          if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m args[0]: "' + args[0] + '"');
+          if(/^<@/.test(args[0])) {
+            let userID = args[0].substring(2, args[0].length-1);
+            if(userID.startsWith('!')) userID = userID.substring(1);
+            msg.guild.members.fetch(userID) .then(userToBan => {
+              if(msg.author.roles.highest.position > userToBan.roles.highest.position || settings.botDevelopers.includes(msg.author.id)) {
+                userToBan.ban({ reason: reason }) .then(() => {
+                  if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m executed ban 1.');
+                  msg.reply({ embed: successMessage(`Banned **${userToBan.user.username}** (${userToBan.user.id}) with reason **${reason}**!`, msg.guild.me.displayColor) });
+                }) .catch(err => {
+                  if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m failed ban 1.');
+                  msg.reply({ embed: errorMessage(`Couldn't ban user:\n${err.message}`) });
+                });
+              } else return msg.reply('You do not have permission to ban this user!');
+            }) .catch(err => {
+              if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m failed ban 1.');
+              msg.guild.members.ban(userID, { reason: reason }) .then(bannedUser => {
+                if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m executed ban 2.');
+                msg.reply({ embed: successMessage(`Banned **${bannedUser.username}** (${bannedUser.id}) with reason **${reason}**!`, msg.guild.me.displayColor) });
+              }) .catch(err => {
+                if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m failed ban 2.');
+                msg.reply({ embed: errorMessage(`Couldn't ban user:\n${err.message}`) });
+              });
+            });
+          } else if(/^[0-9]*$/.test(args[0])) {
+            let userID = args[0];
+            msg.guild.members.fetch(userID) .then(userToBan => {
+              if(msg.author.roles.highest.position > userToBan.roles.highest.position || settings.botDevelopers.includes(msg.author.id)) {
+                userToBan.ban({ reason: reason }) .then(() => {
+                  if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m executed ban 1.');
+                  msg.reply({ embed: successMessage(`Banned **${userToBan.user.username}** (${userToBan.user.id}) with reason **${reason}**!`, msg.guild.me.displayColor) });
+                }) .catch(err => {
+                  if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m failed ban 1.');
+                  msg.reply({ embed: errorMessage(`Couldn't ban user:\n${err.message}`) });
+                });
+              } else return msg.reply('You do not have permission to ban this user!');
+            }) .catch(err => {
+              if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m failed ban 1.');
+              msg.guild.members.ban(userID, { reason: reason }) .then(bannedUser => {
+                if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m executed ban 2.');
+                msg.reply({ embed: successMessage(`Banned **${bannedUser.username}** (${bannedUser.id}) with reason **${reason}**!`, msg.guild.me.displayColor) });
+              }) .catch(e => {
+                if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m failed ban 2.');
+                msg.reply({ embed: errorMessage(`Couldn't ban user:\n${e.message}`) });
+              });
+            });
+          } else {
+            if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m all ban regexps failed.');
+            msg.reply({ embed: errorMessage('Please specify a user to ban!') });
+          }
+        } else return msg.reply({ embed: errorMessage('Please specify a user to ban!') });
+      }
+      break;
+    case 'unban':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m unban command.');
+      if(interaction) {
+        if(!client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id).permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(interaction.member.user.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+        let reason;
+        if(args[1]) reason = args[1].value;
+        else reason = `Unbanned by ${interaction.member.user.username}#${interaction.member.user.discriminator}`;
+        client.guilds.resolve(interaction.guild_id).fetchBans().then(bans => {
+          if(bans.get(args[0].value)) {
+            client.guilds.resolve(interaction.guild_id).members.unban(args[0].value, reason) .then(un => {
+              if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m executed unban.');
+              client.sendInteractionEmbed(successMessage(`Unbanned **${un.username}** (${un.id}) with reason **${reason}**!`, client.guilds.resolve(interaction.guild_id).me.displayColor), interaction.id, interaction.token);
+            }) .catch(e => {
+              if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m failed unban.');
+              client.sendInteractionEmbed(errorMessage(`Failed to unban user:\n${e.message}`), interaction.id, interaction.token);
+            });
+          } else {
+            client.sendInteractionEmbed(errorMessage('User is not banned!'), interaction.id, interaction.token);
+          }
+        });
+      } else {
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+        if(args) {
+          let reason;
+          if(args[1]) {
+            reason = args.slice(1).join(' ');
+          } else reason = `Unbanned by ${msg.author.tag}`;
+
+          if(/^<@/.test(args[0])) {
+            let userID = args[0].substring(2, args[0].length-1);
+            if(userID.startsWith('!')) userID = userID.substring(1);
+
+            msg.guild.fetchBans() .then(bans => {
+              if(bans.get(userID)) {
+                msg.guild.members.unban(userID, reason) .then(un => {
+                  if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m executed unban.');
+                  msg.reply({ embed: successMessage(`Unbanned **${un.username}** (${un.id}) with reason **${reason}**!`, msg.guild.me.displayColor) });
+                }) .catch(e => {
+                  if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m failed unban.');
+                  msg.reply(errorMessage(`Failed to unban user:\n${e.message}`));
+                });
+              } else {
+                msg.reply({ embed: errorMessage('User is not banned!') });
+              }
+            });
+          } else if(/^[0-9]*$/.test(args[0])) {
+            let userID = args[0];
+
+            msg.guild.fetchBans() .then(bans => {
+              if(bans.get(userID)) {
+                msg.guild.members.unban(userID, reason) .then(un => {
+                  if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m executed unban.');
+                  msg.reply({ embed: successMessage(`Unbanned **${un.username}** (${un.id}) with reason **${reason}**!`, msg.guild.me.displayColor) });
+                }) .catch(e => {
+                  if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m failed unban.');
+                  msg.reply(errorMessage(`Failed to unban user:\n${e.message}`));
+                });
+              } else {
+                msg.reply({ embed: errorMessage('User is not banned!') });
+              }
+            });
+          } else {
+            return msg.reply({ embed: errorMessage('Please specify a user to unban!') });
+          }
+
+        } else return msg.reply({ embed: errorMessage('Please specify a user to unban!') });
+      }
+      break;
+    case 'kick':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m kick command.');
+      if(interaction) {
+        let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        if(!author.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+        let reason;
+        if(args[1]) reason = args[1].value
+        else reason = `Kicked by ${author.user.tag}`;
+        author.guild.members.fetch(args[0].value) .then(userToKick => {
+          if(author.roles.highest.position > userToKick.roles.highest.position || settings.botDevelopers.includes(author.id)) {
+            userToKick.kick(reason) .then(() => {
+              if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m executed kick.');
+              client.sendInteractionEmbed(successMessage(`Kicked **${userToKick.user.username}** (${userToKick.user.id}) with reason **${reason}**!`, author.guild.me.displayColor), interaction.id, interaction.token);
+            }) .catch(err => {
+              if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m failed kick.');
+              client.sendInteractionEmbed(successMessage(`Failed to kick user:\n${err.message}`));
+            });
+          } else return msg.reply({ embed: errorMessage('You do not have permission to kick this user!') });
+        });
+      } else {
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+        if(args) {
+          let reason;
+          if(args[1]) reason = args.slice(1).join(' ');
+          else reason = `Kicked by ${msg.author.tag}`;
+
+          if(/^<@/.test(args[0])) {
+            let userID = args[0].substring(2, args[0].length-1);
+            if(userID.startsWith('!')) userID = userID.substring(1);
+
+            msg.guild.members.fetch(userID) .then(userToKick => {
+              if(msg.member.roles.highest.position > userToKick.roles.highest.position || settings.botDevelopers.includes(msg.author.id)) {
+                userToKick.kick(reason) .then(() => {
+                  if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m executed kick.');
+                  msg.reply({ embed: successMessage(`Kicked **${userToKick.user.username}** (${userToKick.user.id}) with reason **${reason}**!`, msg.guild.me.displayColor) });
+                }) .catch(err => {
+                  if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m failed kick.');
+                  msg.reply({ embed: errorMessage(`Failed to kick user:\n${err.messsage}`) });
+                });
+              } else return msg.reply({ embed: errorMessage('You do not have permission to kick this user!') });
+            }) .catch(err => {
+              client.sendInteractionEmbed(errorMessage('User is not in this server'), interaction.id, interaction.token)
+            });
+          } else if(/^[0-9]*$/.test(args[0])) {
+            let userID = args[0];
+
+            msg.guild.members.fetch(userID) .then(userToKick => {
+              if(msg.member.roles.highest.position > userToKick.roles.highest.position || settings.botDevelopers.includes(msg.author.id)) {
+                userToKick.kick(reason) .then(() => {
+                  if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m executed kick.');
+                  msg.reply({ embed: successMessage(`Kicked **${userToKick.user.username}** (${userToKick.user.id}) with reason **${reason}**!`, msg.guild.me.displayColor) });
+                }) .catch(err => {
+                  if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m failed kick.');
+                  msg.reply({ embed: errorMessage(`Failed to kick user:\n${err.messsage}`) });
+                });
+              } else return msg.reply({ embed: errorMessage('You do not have permission to kick this user!') });
+            }) .catch(e => {
+              if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m err: '+ e.message);
+              msg.reply({ embed: errorMessage('User is not in this server!') });
+            });
+          } else {
+            return msg.reply({ embed: errorMessage('Please specify a user to kick!') });
+          }
+        } else return msg.reply({ embed: errorMessage('Please specify a user to kick!') });
+      }
+      break;
+    case 'warnings':
+    case 'warns':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m warnings command.');
+      if(interaction) {
+        let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        if(!author.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+        let warningsFields = [];
+        if(guildsettings.warnings[args[0].value]) {
+          let userWarnings = guildsettings.warnings[args[0].value];
+          if(userWarnings.length == 0) return client.sendInteractionEmbed(errorMessage('This user has no warnings!'), interaction.id, interaction.token);
+          for(let index=0; index<userWarnings.length; index++) {
+            warningsFields[warningsFields.length] = {
+              name: "ID " + userWarnings[index].id + " | " + userWarnings[index].text,
+              value: "Moderator <@" + userWarnings[index].modID + ">"
+            };
+          }
+          author.guild.members.fetch(args[0].value) .then(mem => {
+            client.sendInteractionEmbed({
+              title: `Warnings for ${mem.user.username}:`,
+              color: author.guild.me.displayColor,
+              fields: warningsFields
+            }, interaction.id, interaction.token);
+          }) .catch(err => {
+            client.sendInteractionEmbed({
+              title: `Warnings for ${args[0].value}`,
+              color: author.guild.me.displayColor,
+              fields: warningsFields
+            }, interaction.id, interaction.token);
+          });
+        } else return client.sendInteractionEmbed(errorMessage('This user has no warnings!'), interaction.id, interaction.token);
+      } else {
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+        if(args) {
+          let userID;
+          if(/^<@/.test(args[0])) {
+            userID = args[0].substring(2, args[0].length-1);
+            if(userID.startsWith('!')) userID = userID.substring(1);
+          }
+          else if(/^[0-9]*$/.test(args[0])) {
+            userID = args[0];
+          }
+          else return msg.reply({ embed: errorMessage('Please specify a user!') });
+
+          let warningsFields = [];
+          if(guildsettings.warnings[userID]) {
+            let userWarnings = guildsettings.warnings[userID];
+            if(userWarnings.length == 0) return msg.reply({ embed: errorMessage('This user has no warnings!') });
+            for(let index=0; index<userWarnings.length; index++) {
+              warningsFields[warningsFields.length] = {
+                name: "ID " + userWarnings[index].id + " | " + userWarnings[index].text,
+                value: "Moderator: <@" + userWarnings[index].modID + ">"
+              };
+            }
+            msg.guild.members.fetch(userID) .then(mem => {
+              msg.reply({ embed: {
+                title: `Warnings for ${mem.user.username}:`,
+                color: msg.guild.me.displayColor,
+                fields: warningsFields
+              } });
+            }) .catch(err => {
+              msg.reply({ embed: {
+                title: `Warnings for ${userID}:`,
+                color: msg.guild.me.displayColor,
+                fields: warningsFields
+              } });
+            });
+          } else return msg.reply({ embed: errorMessage('This user has no warnings!') });
+
+        } else return msg.reply({ embed: errorMessage('Please specify a user!') });
+      }
+      break;
+    case 'warn':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m warn command.');
+      if(interaction) {
+        let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        if(!author.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+
+        author.guild.members.fetch(args[0].value) .then(userToWarn => {
+          if(author.roles.highest.position > userToWarn.roles.highest.position || settings.botDevelopers.includes(author.id)) {
+            let reason;
+            if(args[1]) reason = args[1].value
+            else reason = "No reason provided."
+
+            if(!guildsettings.warnings[userToWarn.id]) {
+              guildsettings.warnings[userToWarn.id] = [
+                {
+                  id: 0,
+                  text: reason,
+                  modID: author.id
+                }
+              ];
+            } else {
+              guildsettings.warnings[userToWarn.id][guildsettings.warnings[userToWarn.id].length] = {
+                "id": guildsettings.warnings[userToWarn.id][guildsettings.warnings[userToWarn.id].length-1] ? guildsettings.warnings[userToWarn.id][guildsettings.warnings[userToWarn.id].length-1].id+1 : 0,
+                "text": reason,
+                "modID": author.id
+              };
+            }
+            setGuildSettings(author.guild.id, guildsettings);
+            client.sendInteractionEmbed(successMessage(`Warned ${userToWarn.user.username} (${userToWarn.id}) with reason **${reason}**!`, author.guild.me.displayColor), interaction.id, interaction.token);
+          } else client.sendInteractionEmbed(errorMessage('You do not have permission to warn this user!'), interaction.id, interaction.token);
+        }) .catch(err => {
+          if(err.message.toLowerCase() === 'unknown member') client.sendInteractionEmbed(errorMessage('User is not in this server!'), interaction.id, interaction.token);
+          else client.sendInteractionEmbed(errorMessage(`Failed to warn user:\n${err.message}`), interaction.id, interaction.token);
+        });
+      } else {
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+
+        if(args) {
+          let userID;
+          if(/^<@/.test(args[0])) {
+            userID = args[0].substring(2, args[0].length-1);
+            if(userID.startsWith("!")) userID = userID.substring(1);
+          } else if(/^[0-9]*$/.test(args[0])) {
+            userID = args[0];
+          } else return msg.reply({ embed: errorMessage('Please specify a user to warn.') });
+
+          msg.guild.members.fetch(userID) .then(mem => {
+            if(msg.member.roles.highest.position > mem.roles.highest.position || settings.botDevelopers.includes(msg.author.id)) {
+              let reason;
+              if(args[1]) reason = args.slice(1).join(' ');
+              else reason = "No reason provided."
+
+              if(!guildsettings.warnings[mem.id]) {
+                guildsettings.warnings[mem.id] = [
+                  {
+                    id: 0,
+                    text: reason,
+                    modID: msg.author.id
+                  }
+                ];
+              } else {
+                guildsettings.warnings[mem.id][guildsettings.warnings[mem.id].length] = {
+                  "id": guildsettings.warnings[mem.id][guildsettings.warnings[mem.id].length-1] ? guildsettings.warnings[mem.id][guildsettings.warnings[mem.id].length-1].id+1 : 0,
+                  "text": reason,
+                  "modID": msg.author.id
+                };
+              }
+              setGuildSettings(msg.guild.id, guildsettings);
+              msg.reply({ embed: successMessage(`Warned ${mem.user.username} (${mem.id}) with reason ${reason}!`, msg.guild.me.displayColor) });
+            } else msg.reply({ embed: errorMessage('You do not have permission to warn this user!') });
+          }) .catch(err => {
+            if(err.message.toLowerCase() === 'unknown member') msg.reply({ embed: errorMessage('User is not in this server!') });
+            else msg.reply({ embed: errorMessage(`Failed to warn user:\n${err.message}`) });
+          });
+        } else return msg.reply({ embed: errorMessage('Please specify a user to warn.') });
+      }
+      break;
+    case 'delwarn':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m delwarn command.');
+      if(interaction) {
+        let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        if(!author.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+
+        if(isNaN(parseInt(args[1].value))) return client.sendInteractionEmbed(errorMessage('Please specify a valid warning ID!'), interaction.id, interaction.token);
+        let warnID = parseInt(args[1].value);
+        let userID = args[0].value;
+
+        author.guild.members.fetch(userID) .then(mem => {
+          if(author.roles.highest.position > mem.roles.highest.position || settings.botDevelopers.includes(author.id)) {
+            if(!guildsettings.warnings[mem.id]) return client.sendInteractionEmbed(errorMessage('Invalid warning ID!'), interaction.id, interaction.token);
+            if(!guildsettings.warnings[mem.id].find(warn => warn.id === warnID)) return client.sendInteractionEmbed(errorMessage('Invalid warning ID!'), interaction.id, interaction.token);
+            let warnIndex = guildsettings.warnings[mem.id].findIndex(warn => warn.id === warnID);
+            guildsettings.warnings[mem.id].splice(warnIndex, 1);
+            setGuildSettings(author.guild.id, guildsettings);
+            client.sendInteractionEmbed(successMessage(`Removed warning ID ${warnID} from ${mem.user.username}!`, author.guild.me.displayColor), interaction.id, interaction.token);
+          } else client.sendInteractionEmbed(errorMessage('You do not have permission to remove warnings from this user!'), interaction.id, interaction.token);
+        }) .catch(err => {
+          if(err.message.toLowerCase() === 'unknown member') client.sendInteractionEmbed(errorMessage('User is not in this server!'), interaction.id, interaction.token);
+          else client.sendInteractionEmbed(errorMessage(`Failed to remove warning:\n${err.message}`), interaction.id, interaction.token);
+        });
+      } else {
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.member.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+        if(args) {
+          if(!args[1]) return msg.reply({ embed: errorMessage('Please specify a warning ID!') });
+          if(isNaN(parseInt(args[1]))) return msg.reply({ embed: errorMessage('Please specify a warning ID!') });
+          let warnID = parseInt(args[1]);
+          let userID;
+          if(/^<@/.test(args[0])) {
+            userID = args[0].substring(2, args[0].length-1);
+            if(userID.startsWith("!")) userID = userID.substring(1);
+          } else if(/^[0-9]*$/.test(args[0])) {
+            userID = args[0];
+          } else return msg.reply({ embed: errorMessage('Please specify a user!') });
+
+          msg.guild.members.fetch(userID) .then(mem => {
+            if(msg.member.roles.highest.position > mem.roles.highest.position || settings.botDevelopers.includes(msg.author.id)) {
+              if(!guildsettings.warnings[mem.id]) return msg.reply({ embed: errorMessage('Invalid warning ID!') });
+              if(!guildsettings.warnings[mem.id].find(warn => warn.id === warnID)) return msg.reply({ embed: errorMessage('Invalid warning ID!') });
+              let warnIndex = guildsettings.warnings[mem.id].findIndex(warn => warn.id === warnID);
+              guildsettings.warnings[mem.id].splice(warnIndex, 1);
+              setGuildSettings(msg.guild.id, guildsettings);
+              msg.reply({ embed: successMessage(`Removed warning ID ${warnID} from ${mem.user.username}!`, msg.guild.me.displayColor) });
+            } else msg.reply({ embed: errorMessage('You do not have permission to remove warnings from this user!') });
+          }) .catch(err => {
+            if(err.message.toLowerCase() === 'unknown member') msg.reply({ embed: errorMessage('User is not in this server!') });
+            else msg.reply({ embed: errorMessage(`Failed to remove warning:\n${err.message}`) });
+          });
+        } else return msg.reply({ embed: errorMessage('Please specify a user!') });
+      }
+      break;
+    case 'autokick':
+      console.log('\x1b[31m[DEBUG]\x1b[0m autokick command.');
+      if(interaction) {
+        let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        if(!author.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+        let amount = parseInt(args[0].value);
+        if(amount > 100) amount = 100
+        else if (amount < 0) amount = 0
+        guildsettings.autokick = amount;
+        setGuildSettings(author.guild.id, guildsettings);
+        client.sendInteractionEmbed(successMessage('Set warnings until kick to ' + amount + '!' + (amount == 0 ? ' (none)' : ''), author.guild.me.displayColor), interaction.id, interaction.token);
+      } else {
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+        if(args) {
+          if(isNaN(parseInt(args[0]))) return msg.reply({ embed: errorMessage('Please specify amount of warnings!') });
+          let amount = parseInt(args[0]);
+          if(amount > 100) amount = 100
+          else if(amount < 0) amount = 0
+          guildsettings.autokick = amount;
+          setGuildSettings(msg.guild.id, guildsettings);
+          msg.reply({ embed: successMessage('Set warnings until kick to ' + amount + '!' + (amount == 0 ? ' (none)' : ''), msg.guild.me.displayColor) });
+        } else msg.reply({ embed: errorMessage('Please specify amount of warnings!') });
+      }
+      break;
+    case 'autoban':
+      console.log('\x1b[31m[DEBUG]\x1b[0m autoban command.');
+      if(interaction) {
+        let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        if(!author.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+        let amount = parseInt(args[0].value);
+        if(amount > 100) amount = 100
+        else if (amount < 0) amount = 0
+        guildsettings.autokick = amount;
+        setGuildSettings(author.guild.id, guildsettings);
+        client.sendInteractionEmbed(successMessage('Set warnings until ban to ' + amount + '!' + (amount == 0 ? ' (none)' : ''), author.guild.me.displayColor), interaction.id, interaction.token);
+      } else {
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+        if(args) {
+          if(isNaN(parseInt(args[0]))) return msg.reply({ embed: errorMessage('Please specify amount of warnings!') });
+          let amount = parseInt(args[0]);
+          if(amount > 100) amount = 100
+          else if(amount < 0) amount = 0
+          guildsettings.autokick = amount;
+          setGuildSettings(msg.guild.id, guildsettings);
+          msg.reply({ embed: successMessage('Set warnings until ban to ' + amount + '!' + (amount == 0 ? ' (none)' : ''), msg.guild.me.displayColor) });
+        } else msg.reply({ embed: errorMessage('Please specify amount of warnings!') });
+      }
+      break;
+    case 'store':
+      break;
+    case 'setstore':
+      break;
+    case 'purge':
+      console.log('\x1b[31m[DEBUG]\x1b[0m purge command.');
+      if(interaction) {
+        let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        if(!author.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(author.id)) return client.sendInteractionEmbed(permissionDeniedMsg('ADMINISTRATOR'), interaction.id, interaction.token);
+        let amount = parseInt(args[0].value);
+        if(amount > 100) return client.sendInteractionEmbed(errorMessage('You cannot delete more than 100 messages at once!'), interaction.id, interaction.token);
+        else if(amount < 2) return client.sendInteractionEmbed(errorMessage('You cannot delete less than 2 messages with this command!'), interaction.id, interaction.token);
+
+        author.guild.channels.resolve(interaction.channel_id).bulkDelete(amount) .then(() => client.sendInteractionEmbed(successMessage('Successfully deleted ' + amount + ' messages!', author.guild.me.displayColor), interaction.id, interaction.token)) .catch(err => client.sendInteractionEmbed(errorMessage('Failed to delete messages!\nThe bot cannot delete messages more than two weeks old.'), interaction.id, interaction.token))
+      } else {
+        if(!msg.member.permissions.has('ADMINISTRATOR') && !settings.botDevelopers.includes(msg.author.id)) return msg.reply({ embed: permissionDeniedMsg('ADMINISTRATOR') });
+        if(args) {
+          if(isNaN(parseInt(args[0]))) return msg.reply({ embed: errorMessage('Please specify how many messages to remove!') });
+          let amount = parseInt(args[0]);
+          if(amount > 100) return msg.reply({ embed: errorMessage('You cannot delete more than 100 messages at once!')});
+          else if(amount < 2) return msg.reply({ embed: errorMessage('You cannot delete less than 2 messages with this command!')});
+          msg.channel.bulkDelete(amount) .then(() => msg.reply({ embed: successMessage('Successfully deleted ' + amount + ' messages!', msg.guild.me.displayColor) })) .catch(err => msg.reply({ embed: errorMessage('Failed to delete messages!\nThe bot cannot delete messages more than two weeks old.') }));
+        } else msg.reply({ embed: errorMessage('Please specify how many messages to remove!') });
+      }
+      break;
+    case 'info':
+      console.log('\x1b[31m[DEBUG]\x1b[0m info command.');
+      if(interaction) {
+        client.sendInteractionEmbed({
+          title: ":information_source: | Vapor Info",
+          color: client.guilds.resolve(interaction.guild_id).me.displayColor,
+          fields: [
+            {
+              name: "Server Count",
+              value: client.guilds.cache.size
+            },
+            {
+              name: "Bot Developers",
+              value: settings.botDevelopers.length
+            },
+            {
+              name: "This Guild's Subscription",
+              value: premiumAPI.getGuildType(interaction.guild_id, client) == "Bronze" ? "Bronze (Free)" : premiumAPI.getGuildType(interaction.guild_id, client)
+            }
+          ]
+        }, interaction.id, interaction.token);
+      } else {
+        msg.reply({ embed: {
+          title: ":information_source: | Vapor Info",
+          color: msg.guild.me.displayColor,
+          fields: [
+            {
+              name: "Server Count",
+              value: client.guilds.cache.size
+            },
+            {
+              name: "Bot Developers",
+              value: settings.botDevelopers.length
+            },
+            {
+              name: "This Guild's Subscription",
+              value: premiumAPI.getGuildType(msg.guild.id, client) == "Bronze" ? "Bronze (Free)" : premiumAPI.getGuildType(msg.guild.id, client)
+            }
+          ]
+        } });
+      }
+      break;
+    case 'ping':
+      if(interaction) {
+        client.sendInteractionEmbed({
+          title: ":ping_pong: | Vapor Latency",
+          description: "\n" + client.ws.ping + " ms",
+          color: client.guilds.resolve(interaction.guild_id).me.displayColor
+        }, interaction.id, interaction.token);
+      } else {
+        msg.reply({ embed: {
+          title: ":ping_pong: | Vapor Latency",
+          description: "\n" + client.ws.ping + " ms",
+          color: msg.guild.me.displayColor
+        } });
+      }
+      break;
+    case 'dev':
+      if(interaction) {
+        if(!settings.botDevelopers.includes(interaction.member.user.id)) return;
+        if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m dev command.');
+        switch (args[0].name) {
+          case 'help':
+            client.sendInteractionEmbed({
+              title: "Developer Options",
+              color: client.guilds.resolve(interaction.guild_id).me.displayColor,
+              fields: [
+                {
+                  name: "/dev help",
+                  value: "Show this message."
+                },
+                {
+                  name: "/dev list",
+                  value: "List developer accounts."
+                },
+                {
+                  name: "/dev add",
+                  value: "Add a Vapor developer."
+                },
+                {
+                  name: "/dev remove",
+                  value: "Remove a Vapor developer."
+                },
+                {
+                  name: "/dev guildsettings",
+                  value: "Display the settings of the current guild."
+                },
+                {
+                  name: "/dev grantme",
+                  value: "Grant yourself a role in the guild."
+                }
+              ]
+            }, interaction.id, interaction.token);
+            break;
+            case 'list':
+              let devList = '';
+              for(let i=0; i<settings.botDevelopers.length; i++) {
+                devList += `<@${settings.botDevelopers[i]}>${settings.botDevelopers[i] == client.owner.id ? " Owner" : ""}\n`
+              }
+              client.sendInteractionEmbed({
+                title: "Vapor Developers",
+                description: devList,
+                color: client.guilds.resolve(interaction.guild_id).me.displayColor
+              }, interaction.id, interaction.token);
+              break;
+            case 'add':
+              if(interaction.member.user.id !== client.owner.id) return client.sendInteractionEmbed(errorMessage('This is an owner-only command!'), interaction.id, interaction.token);
+              client.users.fetch(args[0].options[0].value) .then(user => {
+                if(settings.botDevelopers.includes(user.id)) return client.sendInteractionEmbed(errorMessage('User is already a developer!'), interaction.id, interaction.token);
+                settings.botDevelopers[settings.botDevelopers.length] = user.id;
+                fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(settings, null, 2));
+                client.sendInteractionEmbed(successMessage(`Added ${user.username} as a bot developer!`, client.guilds.resolve(interaction.guild_id).me.displayColor), interaction.id, interaction.token);
+              }) .catch(console.log);
+              break;
+            case 'remove':
+              if(interaction.member.user.id !== client.owner.id) return client.sendInteractionEmbed(errorMessage('This is an owner-only command!'), interaction.id, interaction.token);
+              client.users.fetch(args[0].options[0].value) .then(user => {
+                if(!settings.botDevelopers.includes(user.id)) return client.sendInteractionEmbed(errorMessage('User is not a developer!'), interaction.id, interaction.token);
+                if(user.id == client.owner.id) return client.sendInteractionEmbed(errorMessage('You cannot remove yourself!'), interaction.id, interaction.token);
+                settings.botDevelopers.splice(settings.botDevelopers.indexOf(user.id), 1);
+                fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(settings, null, 2));
+                client.sendInteractionEmbed(successMessage(`Removed ${user.username} from bot developers!`, client.guilds.resolve(interaction.guild_id).me.displayColor), interaction.id, interaction.token);
+              }) .catch(console.log);
+              break;
+            case 'guildsettings':
+              client.sendInteractionEmbed({
+                title: "Guild Settings JSON",
+                description: "```json\n" + JSON.stringify(guildsettings, null, 2) + "```",
+                color: client.guilds.resolve(interaction.guild_id).me.displayColor
+              }, interaction.id, interaction.token);
+              break;
+              case 'grantme':
+                let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+                let roleToGrant = client.guilds.resolve(interaction.guild_id).roles.resolve(args[0].options[0].value);
+
+                if(roleToGrant) {
+                  if(author.roles.cache.has(roleToGrant.id)) return client.sendInteractionEmbed(errorMessage('You already have that role!'), interaction.id, interaction.token);
+                  author.roles.add(roleToGrant.id) .then(() => {
+                    client.sendInteractionEmbed(successMessage(`Granted ${roleToGrant.name}!`, author.guild.me.displayColor), interaction.id, interaction.token);
+                  }) .catch(err => client.sendInteractionEmbed(errorMessage('Failed to grant role!'), interaction.id, interaction.token));
+                }
+                break;
+        }
+      } else {
+        if(!settings.botDevelopers.includes(msg.author.id)) return;
+        if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m dev command.');
+        if(args) {
+          switch (args[0]) {
+            case 'help':
+              msg.reply({ embed: {
+                title: "Developer Options",
+                color: msg.guild.me.displayColor,
+                fields: [
+                  {
+                    name: guildsettings.prefix + "dev help",
+                    value: "Show this message."
+                  },
+                  {
+                    name: guildsettings.prefix + "dev list",
+                    value: "List developer accounts."
+                  },
+                  {
+                    name: guildsettings.prefix + "dev add",
+                    value: "Add a Vapor developer."
+                  },
+                  {
+                    name: guildsettings.prefix + "dev remove",
+                    value: "Remove a Vapor developer."
+                  },
+                  {
+                    name: guildsettings.prefix + "dev guildsettings",
+                    value: "Display the settings of the current guild."
+                  },
+                  {
+                    name: guildsettings.prefix + "dev grantme",
+                    value: "Grant yourself a role in the guild."
+                  }
+                ]
+              } });
+              break;
+            case 'list':
+              let devList = '';
+              for(let i=0; i<settings.botDevelopers.length; i++) {
+                devList += `<@${settings.botDevelopers[i]}>${settings.botDevelopers[i] == client.owner.id ? " Owner" : ""}\n`
+              }
+              msg.reply({ embed: {
+                title: "Vapor Developers",
+                description: devList,
+                color: msg.guild.me.displayColor
+              } });
+              break;
+            case 'add':
+                if(msg.member.user.id !== client.owner.id) return msg.reply({ embed: errorMessage('This is an owner-only command!') });
+                if(!args[1]) return msg.reply({ embed: errorMessage('Please specify a user!') });
+                if(/^<@/.test(args[1])) {
+                  args[1] = args[1].substring(2, args[1].length-1);
+                  if(args[1].startsWith('!')) args[1] = args[1].substring(1);
+                } else if(/^[0-9]*$/.test(args[1])) args[1] = args[1];
+                else return msg.reply({ embed: errorMessage('Please specify a user!') });
+                client.users.fetch(args[1]) .then(user => {
+                  if(settings.botDevelopers.includes(user.id)) return msg.reply({ embed: errorMessage('User is already a developer!') });
+                  settings.botDevelopers[settings.botDevelopers.length] = user.id;
+                  fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(settings, null, 2));
+                  msg.reply({ embed: successMessage(`Added ${user.username} as a bot developer!`, msg.guild.me.displayColor) });
+                }) .catch(err => {
+                  msg.reply({ embed: errorMessage('Invalid user!')});
+                });
+                break;
+            case 'remove':
+              if(msg.member.user.id !== client.owner.id) return msg.reply({ embed: errorMessage('This is an owner-only command!') });
+                if(!args[1]) return msg.reply({ embed: errorMessage('Please specify a user!') });
+                if(/^<@/.test(args[1])) {
+                  args[1] = args[1].substring(2, args[1].length-1);
+                  if(args[1].startsWith('!')) args[1] = args[1].substring(1);
+                } else if(/^[0-9]*$/.test(args[1])) args[1] = args[1];
+                else return msg.reply({ embed: errorMessage('Please specify a user!') });
+                client.users.fetch(args[1]) .then(user => {
+                  if(!settings.botDevelopers.includes(user.id)) return msg.reply({ embed: errorMessage('User is not a developer!') });
+                  if(user.id == client.owner.id) return msg.reply({ embed: errorMessage('You cannot remove yourself!') });
+                  settings.botDevelopers.splice(settings.botDevelopers.indexOf(user.id), 1);
+                  fs.writeFileSync(process.env.CONFIG_PATH, JSON.stringify(settings, null, 2));
+                  msg.reply({ embed: successMessage(`Removed ${user.username} from bot developers!`, msg.guild.me.displayColor) });
+                }) .catch(err => {
+                  msg.reply({ embed: errorMessage('Invalid user!')});
+                });
+                break;
+            case 'guildsettings':
+              msg.reply({ embed: {
+                title: "Guild Settings JSON",
+                description: "```json\n" + JSON.stringify(guildsettings, null, 2) + "```",
+                color: msg.guild.me.displayColor
+              } });
+              break;
+            case 'grantme':
+              if(!args[1]) return msg.reply({ embed: errorMessage('Please specify a role!') });
+              if(/^<&/.test(args[1])) {
+                args[1] = args[1].substring(2, args[1].length-1);
+                if(args[1].startsWith('!')) args[1] = args[1].substring(1)
+              } else if(/^[0-9]*$/.test(args[1])) args[1] = args[1]
+              else return msg.reply({ embed: errorMessage('Please specify a role!') });
+              let roleToGrant = msg.guild.roles.resolve(args[1]);
+
+              if(roleToGrant) {
+                if(msg.member.roles.cache.has(roleToGrant.id)) return msg.reply({ embed: errorMessage('You already have that role!') });
+                msg.member.roles.add(roleToGrant.id) .then(() => {
+                  msg.reply({ embed: successMessage(`Granted ${roleToGrant.name}!`, msg.guild.me.displayColor) });
+                }) .catch(err => msg.reply({ embed: errorMessage('Failed to grant role!') }));
+              } else return msg.reply({ embed: errorMessage('Please specify a role!') });
+              break;
+            default:
+              msg.reply({ embed: errorMessage('Please specify a subcommand!') });
+              break;
+          }
+        } else msg.reply({ embed: errorMessage('Please specify a subcommand!') });
+      }
+      break;
+    case 'passwordprotect':
+      break;
+    case 'play':
+    case 'p':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m play command.');
+      if(interaction) {
+        let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        let guildsettings = getGuildSettings(author.guild.id);
+        if(!author.guild.me.voice.channelID) {
+          if(!author.voice.channelID) return client.sendInteractionEmbed(errorMessage('You are not in a voice channel!'), interaction.id, interaction.token);
+          await author.voice.channel.join() .then(con => {
+            conMap[author.guild.id] = con;
+            con.on('disconnect', () => musicBotAPI.handleDisconnect(con));
+          })
+        }
+        if(author.voice.channelID !== author.guild.me.voice.channelID) return client.sendInteractionEmbed(errorMessage('You are not in my voice channel!'), interaction.id, interaction.token);
+        if(author.voice.selfDeaf || author.voice.deaf) return client.sendInteractionEmbed(errorMessage('You cannot do this while deafened!'), interaction.id, interaction.token);
+        // Play music logic.
+        client.sendDefer(interaction.id, interaction.token);
+        musicBotAPI.sa(conMap[author.guild.id], args[0].value, true, interaction);
+      } else {
+
+      }
+      break;
+    case 'queue':
+    case 'q':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m queue command.');
+      if(interaction) {
+
+      } else {
+
+      }
+      break;
+    case 'stop':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m stop command.');
+      if(interaction) {
+
+      } else {
+
+      }
+      break;
+    case 'pause':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m pause command.');
+      if(interaction) {
+
+      } else {
+
+      }
+      break;
+    case 'disconnect':
+    case 'dc':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m disconnect command.');
+      if(interaction) {
+
+      } else {
+
+      }
+      break;
+    case 'join':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m join command.');
+      if(interaction) {
+
+      } else {
+
+      }
+      break;
+    case 'nowplaying':
+    case 'np':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m nowplaying command.');
+      if(interaction) {
+
+      } else {
+
+      }
+      break;
+    case '24/7':
+    case '24_7':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m 24_7 command.');
+      if(interaction) {
+
+      } else {
+
+      }
+      break;
+    case 'lyrics':
+      console.log(musicBotAPI.getLyrics(args.slice(1).join(' ')));
+      break;
+    case 'invite':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m invite command.');
+      if(interaction) {
+        client.sendInteractionEmbed({
+          title: "Invite Vapor",
+          color: client.guilds.resolve(interaction.guild_id).me.displayColor,
+          thumbnail: {
+            url: client.user.avatarURL()
+          },
+          description: `[Click Here](https://discord.com/oauth2/authorize?scope=bot+applications.commands&permissions=8&client_id=${client.user.id}) to invite ${client.user.username} to your server.`
+        }, interaction.id, interaction.token);
+      } else {
+        msg.reply({ embed: {
+          title: "Invite Vapor",
+          color: msg.guild.me.displayColor,
+          thumbnail: {
+            url: client.user.avatarURL()
+          },
+          description: `[Click Here](https://discord.com/oauth2/authorize?scope=bot+applications.commands&permissions=8&client_id=${client.user.id}) to invite ${client.user.username} to your server.`
+        } });
+      }
+      break;
+  }
+};
+
+function initSlashCommands(guild) {
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "help",
+      description: "Show Vapor help.",
+      options: [
+        {
+          type: 3,
+          name: "module",
+          choices: [{name: "moderation", value: "mod"}, {name: "music", value: "mus"}, {name: "miscellaneous", value: "misc"}],
+          required: false,
+          description: "What help module you would like to view."
+        }
+      ]
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "unban",
+      description: "Unban a user.",
+      options: [
+        {
+          type: 6,
+          name: "user",
+          description: "User to unban.",
+          required: true
+        },
+        {
+          type: 3,
+          name: "reason",
+          description: "Reason for unban.",
+          required: false
+        }
+      ]
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "warn",
+      description: "Warn a user.",
+      options: [
+        {
+          type: 6,
+          name: "user",
+          description: "User to warn.",
+          required: true
+        },
+        {
+          type: 3,
+          name: "reason",
+          description: "Reason for warning.",
+          required: false
+        }
+      ]
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "ban",
+      description: "Ban a user.",
+      options: [
+        {
+          type: 6,
+          name: "user",
+          description: "User to ban.",
+          required: true
+        },
+        {
+          type: 3,
+          name: "reason",
+          description: "Reason for ban.",
+          required: false
+        }
+      ]
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "setprefix",
+      description: "Set Vapor's prefix.",
+      options: [
+        {
+          type: 3,
+          name: "prefix",
+          description: "New prefix.",
+          required: true
+        }
+      ]
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "kick",
+      description: "Kick a user.",
+      options: [
+        {
+          type: 6,
+          name: "user",
+          description: "User to kick.",
+          required: true
+        },
+        {
+          type: 3,
+          name: "reason",
+          description: "Reason for kick.",
+          required: false
+        }
+      ]
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "warnings",
+      description: "View warnings of a user.",
+      options: [
+        {
+          type: 6,
+          name: "user",
+          description: "User to list the warnings of.",
+          required: true
+        }
+      ]
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "delwarn",
+      description: "Remove a warning from a user.",
+      options: [
+        {
+          type: 6,
+          name: "user",
+          description: "User to remove the warning from.",
+          required: true
+        },
+        {
+          type: 4,
+          name: "id",
+          description: "ID of warning to remove.",
+          required: true
+        }
+      ]
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "autokick",
+      description: "Set amount of warnings until a user gets kicked.",
+      options: [
+        {
+          type: 4,
+          name: "amount",
+          description: "Amount of warnings.",
+          required: true
+        }
+      ]
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "autoban",
+      description: "Set amount of warnings until a user gets banned.",
+      options: [
+        {
+          type: 4,
+          name: "amount",
+          description: "Amount of warnings.",
+          required: true
+        }
+      ]
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "purge",
+      description: "Remove an amount of messages.",
+      options: [
+        {
+          type: 4,
+          name: "amount",
+          description: "Amount of messages to remove.",
+          required: true
+        }
+      ]
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "store",
+      description: "Go to the server's donation link."
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "setstore",
+      description: "Set server donation link.",
+      options: [
+        {
+          type: 3,
+          name: "url",
+          description: "New donation link.",
+          required: true
+        }
+      ]
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "info",
+      description: "Get Vapor's statistics."
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "ping",
+      description: "View Vapor's latency."
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "dev",
+      description: "Developer options.",
+      options: [
+        {
+          type: 1,
+          name: "help",
+          description: "Developer help."
+        },
+        {
+          type: 1,
+          name: "list",
+          description: "Developer list."
+        },
+        {
+          type: 1,
+          name: "add",
+          description: "Developer add.",
+          options: [
+            {
+              type: 6,
+              name: "user",
+              description: "Developer to add.",
+              required: true
+            }
+          ]
+        },
+        {
+          type: 1,
+          name: "remove",
+          description: "Developer remove.",
+          options: [
+            {
+              type: 6,
+              name: "user",
+              description: "Developer to remove.",
+              required: true
+            }
+          ]
+        },
+        {
+          type: 1,
+          name: "guildsettings",
+          description: "Developer guildsettings."
+        },
+        {
+          type: 1,
+          name: "grantme",
+          description: "Developer grantme.",
+          options: [
+            {
+              type: 8,
+              name: "role",
+              description: "Role to grant yourself.",
+              required: true
+            }
+          ]
+        }
+      ]
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "invite",
+      description: "Invite Vapor to your server."
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "play",
+      description: "Play a song.",
+      options: [
+        {
+          type: 3,
+          name: "query",
+          description: "Song to play.",
+          required: true
+        }
+      ]
+    }
+  });
+}
+
+client.ws.on('INTERACTION_CREATE', i => {
+  if(i.data.options) execute(i.data.name, i.data.options, i);
+  else execute(i.data.name, undefined, i);
+});
