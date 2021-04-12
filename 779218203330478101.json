@@ -79,8 +79,8 @@
     }
   ],
   "nowPlaying": 0,
-  "lastPlayed": null,
+  "lastPlayed": -1,
   "twentyFourSeven": 1,
-  "loopType": null,
+  "loopType": "song",
   "devRole": "808567334997458977"
 }
