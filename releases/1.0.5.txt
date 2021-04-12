@@ -1,1 +1,0 @@
-- No updates will be released for a while, working on Music Bot API behind the scenes.
