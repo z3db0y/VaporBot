@@ -1,3 +1,5 @@
+const fs = require('fs');
+
 class GuildAPI {
 
     construtor (guildDir) {
