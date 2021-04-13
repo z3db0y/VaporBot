@@ -1432,11 +1432,11 @@ let execute = async (msg, args, interaction) => {
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m play command.');
       if(interaction) {
         let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
-        let guildsettings = guildAPI.getGuildSettings(author.guild.id);
         if(!author.guild.me.voice.channelID) {
           if(!author.voice.channelID) return client.sendInteractionEmbed(errorMessage('You are not in a voice channel!'), interaction.id, interaction.token);
           await author.voice.channel.join() .then(con => {
             conMap[author.guild.id] = con;
+            con.voice.setDeaf(true);
             con.on('disconnect', () => musicBotAPI.handleDisconnect(con));
           })
         }
@@ -1446,7 +1446,19 @@ let execute = async (msg, args, interaction) => {
         client.sendDefer(interaction.id, interaction.token);
         musicBotAPI.sa(conMap[author.guild.id], args[0].value, true, interaction);
       } else {
-
+        if(!args) return msg.reply({ embed: errorMessage('Please specify a query or youtube url!') });
+        if(!msg.guild.me.voice.channelID) {
+          if(!msg.member.voice.channelID) return msg.reply({ embed: errorMessage('You are not in a voice channel!') });
+          await msg.member.voice.channel.join() .then(con => {
+            conMap[msg.guild.id] = con;
+            con.voice.setDeaf(true);
+            con.on('disconnect', () => musicBotAPI.handleDisconnect(con));
+          });
+        }
+        if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return msg.reply({ embed: errorMessage('You are not in my voice channel!') });
+        if(msg.member.voice.selfDeaf || msg.member.voice.deaf) return msg.reply({ embed: errorMessage('You cannot do this while deafened!') });
+        // Play music logic.
+        musicBotAPI.sa(conMap[msg.guild.id], args.join(' '), true, msg);
       }
       break;
     case 'queue':
