@@ -57,6 +57,7 @@ let musicBotAPI = new class MusicBot {
         if(moi.token) client.editInteraction( successMessage('Now playing: ' + video.title, connection.channel.guild.me.displayColor), moi.id, moi.token );
         else moi.reply({ embed: successMessage('Now playing: ' + video.title, msg.guild.me.displayColor) });
       }) .catch(err => {
+        if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m ' + err.message);
         if(moi.token) client.editInteraction( errorMessage('Nothing found.'), moi.id, moi.token );
         else moi.reply({ embed: errorMessage('Nothing found.') });
       });
