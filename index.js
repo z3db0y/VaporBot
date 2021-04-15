@@ -1459,7 +1459,15 @@ let execute = async (msg, args, interaction) => {
         if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return msg.reply({ embed: errorMessage('You are not in my voice channel!') });
         if(msg.member.voice.selfDeaf || msg.member.voice.deaf) return msg.reply({ embed: errorMessage('You cannot do this while deafened!') });
         // Play music logic.
-        musicBotAPI.sa(conMap[msg.guild.id], args.join(' '), true, msg);
+        musicBotAPI.sa(conMap[msg.guild.id], args.join(' '), true, args.slice(1).join(' '));
+      }
+      break;
+    case 'add':
+      if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m add command.');
+      if(interaction) {
+
+      } else {
+        
       }
       break;
     case 'queue':
@@ -1845,6 +1853,34 @@ function initSlashCommands(guild) {
           type: 3,
           name: "query",
           description: "Song to play.",
+          required: true
+        }
+      ]
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "add",
+      description: "Add a song to the queue.",
+      options: [
+        {
+          type: 3,
+          name: "query",
+          description: "Song to add to queue.",
+          required: true
+        }
+      ]
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "remove",
+      description: "Remove a song from the queue.",
+      options: [
+        {
+          type: 4,
+          name: "index",
+          description: "ID of song to remove.",
           required: true
         }
       ]
