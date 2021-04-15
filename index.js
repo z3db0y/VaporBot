@@ -53,6 +53,7 @@ let musicBotAPI = new class MusicBot {
     async function doQuery() {
       await srYt(query).then(video => {
         aQ({ url: video.url, title: video.title }, connection);
+        guildsettings = guildAPI.getGuildSettings(connection.channel.guild.id);
         if(!guildsettings.nowPlaying) rP(connection);
         if(moi.token) client.editInteraction( successMessage('Now playing: ' + video.title, connection.channel.guild.me.displayColor), moi.id, moi.token );
         else moi.reply({ embed: successMessage('Now playing: ' + video.title, moi.guild.me.displayColor) });
