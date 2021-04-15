@@ -1459,7 +1459,7 @@ let execute = async (msg, args, interaction) => {
         if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return msg.reply({ embed: errorMessage('You are not in my voice channel!') });
         if(msg.member.voice.selfDeaf || msg.member.voice.deaf) return msg.reply({ embed: errorMessage('You cannot do this while deafened!') });
         // Play music logic.
-        musicBotAPI.sa(conMap[msg.guild.id], args.join(' '), true, args.slice(1).join(' '));
+        musicBotAPI.sa(conMap[msg.guild.id], args.slice(0).join(' '), true, msg);
       }
       break;
     case 'add':
