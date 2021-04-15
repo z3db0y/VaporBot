@@ -67,7 +67,7 @@ let musicBotAPI = new class MusicBot {
         aQ({ url: u, title: info.videoDetails.title}, connection);
         if(!guildsettings.nowPlaying) rP(connection);
         if(moi.token) client.editInteraction( successMessage('Now playing: ' + info.videoDetails.title, connection.channel.guild.me.displayColor), moi.id, moi.token );
-        else moi.reply({ embed: successMessage('Now playing: ' + info.videoDetails.title, msg.guild.me.displayColor) });
+        else moi.reply({ embed: successMessage('Now playing: ' + info.videoDetails.title, moi.guild.me.displayColor) });
       }) .catch(err => {
         if(moi.token) client.editInteraction( errorMessage('Unable to play song.'), moi.id, moi.token );
         else moi.reply({ embed: errorMessage('Unable to play song.') });
