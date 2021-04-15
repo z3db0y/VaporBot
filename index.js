@@ -97,6 +97,7 @@ let musicBotAPI = new class MusicBot {
     let guildsettings = guildAPI.getGuildSettings(c.channel.guild.id);
     if(guildsettings.lastPlayed) guildsettings.nowPlaying = guildsettings.lastPlayed+1;
     else guildsettings.nowPlaying = 0
+    guildAPI.setGuildSettings(c.channel.guild.id, guildsettings);
     c.play(ytdl(guildsettings.musicQueue[guildsettings.nowPlaying].url, { filter: 'audioonly' })) .on('finish', () => {
       guildsettings = guildAPI.getGuildSettings(c.channel.guild.id);
 
