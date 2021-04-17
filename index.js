@@ -1454,7 +1454,7 @@ let execute = async (msg, args, interaction) => {
           if(msg.guild.me.voice.channelID) if(msg.guild.me.voice.connection.dispatcher) {
             if(conMap[msg.guild.id].paused) {
               conMap[msg.guild.id].resume();
-              msg.reply({ embed: successMessage('Resumed playback!', msg.guild.me.displayColor) });
+              return msg.reply({ embed: successMessage('Resumed playback!', msg.guild.me.displayColor) });
             }
           }
           else return msg.reply({ embed: errorMessage('Please specify a query or youtube url!') });
@@ -1943,6 +1943,12 @@ function initSlashCommands(guild) {
     data: {
       name: "pause",
       description: "Pause playback."
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "stop",
+      description: "Stop playback."
     }
   });
   client.api.applications(client.user.id).guilds(guild.id).commands.post({
