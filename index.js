@@ -123,6 +123,7 @@ let musicBotAPI = new class MusicBot {
   }
 
   resetQ(c) {
+    if(conMap[c.channel.guild.id]) conMap[c.channel.guild.id] = null;
     let guildsettings = guildAPI.getGuildSettings(c.channel.guild.id);
     guildsettings.musicQueue = [];
     guildsettings.nowPlaying = null;
@@ -1449,7 +1450,15 @@ let execute = async (msg, args, interaction) => {
         client.sendDefer(interaction.id, interaction.token);
         musicBotAPI.sa(conMap[author.guild.id], args[0].value, true, interaction);
       } else {
-        if(!args) return msg.reply({ embed: errorMessage('Please specify a query or youtube url!') });
+        if(!args) {
+          if(msg.guild.me.voice.connection.dispatcher) {
+            if(conMap[msg.guild.id].paused) {
+              conMap[msg.guild.id].resume();
+              msg.reply({ embed: successMessage('Resumed playback!', msg.guild.me.displayColor) });
+            }
+          }
+          else return msg.reply({ embed: errorMessage('Please specify a query or youtube url!') });
+        }
         if(!msg.guild.me.voice.channelID) {
           if(!msg.member.voice.channelID) return msg.reply({ embed: errorMessage('You are not in a voice channel!') });
           await msg.member.voice.channel.join() .then(con => {
@@ -1515,26 +1524,64 @@ let execute = async (msg, args, interaction) => {
     case 'stop':
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m stop command.');
       if(interaction) {
-
+        let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        if(!author.guild.me.voice.channelID) return client.sendInteractionEmbed(errorMessage('I am not playing anything!'), interaction.id, interaction.token);
+        if(!author.guild.me.voice.connection.dispatcher) return client.sendInteractionEmbed(errorMessage('I am not playing anything!'), interaction.id, interaction.token);
+        if(author.voice.channelID !== author.guild.me.voice.channelID) return client.sendInteractionEmbed(errorMessage('You are not in my voice channel!'), interaction.id, interaction.token);
+        if(author.voice.selfDeaf || author.voice.deaf) return client.sendInteractionEmbed(errorMessage('You cannot do this while deafened!'), interaction.id, interaction.token);
+        musicBotAPI.resetQ(conMap[author.guild.id]);
+        client.sendInteractionEmbed(successMessage('Stopped playback!', author.guild.me.displayColor), interaction.id, interaction.token);
       } else {
-
+        if(!msg.guild.me.voice.channelID) return msg.reply({ embed: errorMessage('I am not playing anything!') });
+        if(!msg.guild.me.voice.connection.dispatcher) return msg.reply({ embed: errorMessage('I am not playing anything!') });
+        if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return msg.reply({ embed: errorMessage('You are not in my voice channel!') });
+        if(msg.member.voice.selfDeaf || msg.member.voice.deaf) return msg.reply({ embed: errorMessage('You cannot do this while deafened!') });
+        musicBotAPI.resetQ(conMap[author.guild.id]);
+        msg.reply({ embed: successMessage('Stopped playback!', msg.guild.me.displayColor) });
       }
       break;
     case 'pause':
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m pause command.');
       if(interaction) {
-
+        let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        if(!author.guild.me.voice.channelID) return client.sendInteractionEmbed(errorMessage('I am not playing anything!'), interaction.id, interaction.token);
+        if(!author.guild.me.voice.connection.dispatcher) return client.sendInteractionEmbed(errorMessage('I am not playing anything!'), interaction.id, interaction.token);
+        if(author.voice.channelID !== author.guild.me.voice.channelID) return client.sendInteractionEmbed(errorMessage('You are not in my voice channel!'), interaction.id, interaction.token);
+        if(author.voice.selfDeaf || author.voice.deaf) return client.sendInteractionEmbed(errorMessage('You cannot do this while deafened!'), interaction.id, interaction.token);
+        if(author.guild.me.voice.connection.dispatcher.paused) {
+          author.guild.me.voice.connection.dispatcher.resume();
+          client.sendInteractionEmbed(successMessage('Resumed playback!', author.guild.me.displayColor), interaction.id, interaction.token);
+        } else {
+          author.guild.me.voice.connection.dispatcher.pause();
+          client.sendInteractionEmbed(successMessage('Paused playback!', author.guild.me.displayColor), interaction.id, interaction.token);
+        }
       } else {
-
+        if(!msg.guild.me.voice.channelID) return msg.reply({ embed: errorMessage('I am not playing anything!') });
+        if(!msg.guild.me.voice.connection.dispatcher) return msg.reply({ embed: errorMessage('I am not playing anything!') });
+        if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return msg.reply({ embed: errorMessage('You are not in my voice channel!') });
+        if(msg.member.voice.selfDeaf || msg.member.voice.deaf) return msg.reply({ embed: errorMessage('You cannot do this while deafened!') });
       }
       break;
     case 'disconnect':
     case 'dc':
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m disconnect command.');
       if(interaction) {
-
+        let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        if(!author.guild.me.voice.channelID) return client.sendInteractionEmbed(errorMessage('I am not in a voice channel!'), interaction.id, interaction.token);
+        if(author.voice.channelID !== author.guild.me.voice.channelID) return client.sendInteractionEmbed(errorMessage('You are not in my voice channel!'), interaction.id, interaction.token);
+        if(author.voice.selfDeaf || author.voice.deaf) return client.sendInteractionEmbed(errorMessage('You cannot do this while deafened!'), interaction.id, interaction.token);
+        if(conMap[author.guild.id]) {
+          conMap[author.guild.id].channel.leave();
+          client.sendInteractionEmbed(successMessage('I left your voice channel!', author.guild.me.displayColor), interaction.id, interaction.token);
+        }
       } else {
-
+        if(!msg.guild.me.voice.channelID) return msg.reply({ embed: errorMessage('I am not in a voice channel!') });
+        if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return msg.reply({ embed: errorMessage('You are not in my voice channel!') });
+        if(msg.member.voice.selfDeaf || msg.member.voice.deaf) return msg.reply({ embed: errorMessage('You cannot do this while deafened!') });
+        if(conMap[author.guild.id]) {
+          conMap[author.guild.id].channel.leave();
+          msg.reply({ embed: successMessage('I left your voice channel!', msg.guild.me.displayColor) });
+        }
       }
       break;
     case 'join':
