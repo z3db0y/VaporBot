@@ -123,7 +123,6 @@ let musicBotAPI = new class MusicBot {
   }
 
   resetQ(c) {
-    if(conMap[c.channel.guild.id]) conMap[c.channel.guild.id] = null;
     let guildsettings = guildAPI.getGuildSettings(c.channel.guild.id);
     guildsettings.musicQueue = [];
     guildsettings.nowPlaying = null;
@@ -167,6 +166,7 @@ let musicBotAPI = new class MusicBot {
   }
 
   handleDisconnect(c) {
+    if(conMap[c.channel.guild.id]) conMap[c.channel.guild.id] = null;
     this.resetQ(c);
   }
 }
