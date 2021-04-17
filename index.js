@@ -1941,6 +1941,12 @@ function initSlashCommands(guild) {
   });
   client.api.applications(client.user.id).guilds(guild.id).commands.post({
     data: {
+      name: "pause",
+      description: "Pause playback."
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
       name: "add",
       description: "Add a song to the queue.",
       options: [
