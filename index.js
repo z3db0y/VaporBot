@@ -1453,7 +1453,7 @@ let execute = async (msg, args, interaction) => {
         if(!args) {
           if(msg.guild.me.voice.channelID) if(msg.guild.me.voice.connection.dispatcher) {
             if(conMap[msg.guild.id].dispatcher.paused) {
-              conMap[msg.guild.id].resume();
+              conMap[msg.guild.id].dispatcher.resume();
               return msg.reply({ embed: successMessage('Resumed playback!', msg.guild.me.displayColor) });
             } else return msg.reply({ embed: errorMessage('Please specify a query or youtube url!') });
           }
