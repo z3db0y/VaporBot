@@ -1451,12 +1451,13 @@ let execute = async (msg, args, interaction) => {
         musicBotAPI.sa(conMap[author.guild.id], args[0].value, true, interaction);
       } else {
         if(!args) {
-          if(msg.guild.me.voice.connection.dispatcher) {
+          if(msg.guild.me.voice.channelID) if(msg.guild.me.voice.connection.dispatcher) {
             if(conMap[msg.guild.id].paused) {
               conMap[msg.guild.id].resume();
               msg.reply({ embed: successMessage('Resumed playback!', msg.guild.me.displayColor) });
             }
           }
+          else return msg.reply({ embed: errorMessage('Please specify a query or youtube url!') });
           else return msg.reply({ embed: errorMessage('Please specify a query or youtube url!') });
         }
         if(!msg.guild.me.voice.channelID) {
