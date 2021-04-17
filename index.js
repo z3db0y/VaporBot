@@ -1579,8 +1579,8 @@ let execute = async (msg, args, interaction) => {
         if(!msg.guild.me.voice.channelID) return msg.reply({ embed: errorMessage('I am not in a voice channel!') });
         if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return msg.reply({ embed: errorMessage('You are not in my voice channel!') });
         if(msg.member.voice.selfDeaf || msg.member.voice.deaf) return msg.reply({ embed: errorMessage('You cannot do this while deafened!') });
-        if(conMap[author.guild.id]) {
-          conMap[author.guild.id].channel.leave();
+        if(conMap[msg.guild.id]) {
+          conMap[msg.guild.id].channel.leave();
           msg.reply({ embed: successMessage('I left your voice channel!', msg.guild.me.displayColor) });
         }
       }
