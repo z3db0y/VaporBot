@@ -1550,10 +1550,10 @@ let execute = async (msg, args, interaction) => {
         if(author.voice.channelID !== author.guild.me.voice.channelID) return client.sendInteractionEmbed(errorMessage('You are not in my voice channel!'), interaction.id, interaction.token);
         if(author.voice.selfDeaf || author.voice.deaf) return client.sendInteractionEmbed(errorMessage('You cannot do this while deafened!'), interaction.id, interaction.token);
         if(author.guild.me.voice.connection.dispatcher.paused) {
-          author.guild.me.voice.connection.dispatcher.resume();
+          conMap[author.guild.id].dispatcher.resume();
           client.sendInteractionEmbed(successMessage('Resumed playback!', author.guild.me.displayColor), interaction.id, interaction.token);
         } else {
-          author.guild.me.voice.connection.dispatcher.pause();
+          conMap[author.guild.id].dispatcher.pause();
           client.sendInteractionEmbed(successMessage('Paused playback!', author.guild.me.displayColor), interaction.id, interaction.token);
         }
       } else {
