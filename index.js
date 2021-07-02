@@ -1588,9 +1588,24 @@ let execute = async (msg, args, interaction) => {
     case 'join':
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m join command.');
       if(interaction) {
-
+        let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        if(!author.guild.me.voice.channelID) {
+          if(!author.voice.channelID) return client.sendInteractionEmbed(errorMessage('You are not in a voice channel!'), interaction.id, interaction.token);
+          await author.voice.channel.join() .then(con => {
+            conMap[author.guild.id] = con;
+            con.voice.setDeaf(true);
+            con.on('disconnect', () => musicBotAPI.handleDisconnect(con));
+          })
+        } else msg.reply({ embed: errorMessage('I am already in a voice channel!') });
       } else {
-
+        if(!msg.guild.me.voice.channelID) {
+          if(!msg.member.voice.channelID) return msg.reply({ embed: errorMessage('You are not in a voice channel!') });
+          await msg.member.voice.channel.join() .then(con => {
+            conMap[msg.guild.id] = con;
+            con.voice.setDeaf(true);
+            con.on('disconnect', () => musicBotAPI.handleDisconnect(con));
+          });
+        } else client.sendInteractionEmbed(errorMessage('I am already in a voice channel!'), interaction.id, interaction.token);
       }
       break;
     case 'nowplaying':
@@ -1606,7 +1621,7 @@ let execute = async (msg, args, interaction) => {
     case '24_7':
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m 24_7 command.');
       if(interaction) {
-
+        
       } else {
 
       }
