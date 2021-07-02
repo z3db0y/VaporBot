@@ -629,7 +629,7 @@ let execute = async (msg, args, interaction) => {
               },
               {
                   name: "/help music",
-                  value: "⚠ Due to recent changes to the API, this feature is unavailable.\nShows music commands."
+                  value: "**⚠ Due to recent changes to the API, this feature is unavailable.**\nShows music commands."
               },
               {
                   name: "/help miscellaneous",
@@ -647,7 +647,7 @@ let execute = async (msg, args, interaction) => {
             },
             {
                 name: guildsettings.prefix + "help music",
-                value: "⚠ Due to recent changes to the API, this feature is unavailable.\nShows music commands."
+                value: "**⚠ Due to recent changes to the API, this feature is unavailable.**\nShows music commands."
             },
             {
                 name: guildsettings.prefix + "help miscellaneous",
