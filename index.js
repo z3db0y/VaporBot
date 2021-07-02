@@ -42,6 +42,12 @@ const roundToNearest5 = x => Math.round(x/5)*5;
 // if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m ');
 const debugging = process.argv.includes('--debug') || process.argv.includes('--dbg');
 
+let disabledCommand = (author) => {
+  let settings = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH));
+  if(settings.botDevelopers.includes(author.id)) return true
+  return false
+}
+
 let musicBotAPI = new class MusicBot {
 
   sa(connection, query, reset, moi) {
@@ -623,7 +629,7 @@ let execute = async (msg, args, interaction) => {
               },
               {
                   name: "/help music",
-                  value: "Shows music commands."
+                  value: "⚠ Due to recent changes to the API, this feature is unavailable.\nShows music commands."
               },
               {
                   name: "/help miscellaneous",
@@ -641,7 +647,7 @@ let execute = async (msg, args, interaction) => {
             },
             {
                 name: guildsettings.prefix + "help music",
-                value: "Shows music commands."
+                value: "⚠ Due to recent changes to the API, this feature is unavailable.\nShows music commands."
             },
             {
                 name: guildsettings.prefix + "help miscellaneous",
@@ -1437,6 +1443,7 @@ let execute = async (msg, args, interaction) => {
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m play command.');
       if(interaction) {
         let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        if(!disabledCommand(author)) return
         if(!author.guild.me.voice.channelID) {
           if(!author.voice.channelID) return client.sendInteractionEmbed(errorMessage('You are not in a voice channel!'), interaction.id, interaction.token);
           author.voice.channel.join() .then(con => {
@@ -1451,6 +1458,7 @@ let execute = async (msg, args, interaction) => {
         client.sendDefer(interaction.id, interaction.token);
         musicBotAPI.sa(conMap[author.guild.id], args[0].value, true, interaction);
       } else {
+        if(!disabledCommand(msg.author)) return
         if(!args) {
           if(msg.guild.me.voice.channelID) if(msg.guild.me.voice.connection.dispatcher) {
             if(conMap[msg.guild.id].dispatcher.paused) {
@@ -1479,6 +1487,7 @@ let execute = async (msg, args, interaction) => {
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m add command.');
       if(interaction) {
         let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        if(!disabledCommand(author)) return
         if(!author.guild.me.voice.channelID) {
           if(!author.voice.channelID) return client.sendInteractionEmbed(errorMessage('You are not in a voice channel!'), interaction.id, interaction.token);
           await author.voice.channel.join() .then(con => {
@@ -1493,6 +1502,7 @@ let execute = async (msg, args, interaction) => {
         client.sendDefer(interaction.id, interaction.token);
         musicBotAPI.sa(conMap[author.guild.id], args[0].value, false, interaction);
       } else {
+        if(!disabledCommand(msg.author)) return
         if(!args) return msg.reply({ embeds: [ errorMessage('Please specify a query or youtube url!') ] });
         if(!msg.guild.me.voice.channelID) {
           if(!msg.member.voice.channelID) return msg.reply({ embeds: [ errorMessage('You are not in a voice channel!') ] });
@@ -1527,6 +1537,7 @@ let execute = async (msg, args, interaction) => {
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m stop command.');
       if(interaction) {
         let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        if(!disabledCommand(author)) return
         if(!author.guild.me.voice.channelID) return client.sendInteractionEmbed(errorMessage('I am not playing anything!'), interaction.id, interaction.token);
         if(!author.guild.me.voice.connection.dispatcher) return client.sendInteractionEmbed(errorMessage('I am not playing anything!'), interaction.id, interaction.token);
         if(author.voice.channelID !== author.guild.me.voice.channelID) return client.sendInteractionEmbed(errorMessage('You are not in my voice channel!'), interaction.id, interaction.token);
@@ -1534,6 +1545,7 @@ let execute = async (msg, args, interaction) => {
         musicBotAPI.resetQ(conMap[author.guild.id]);
         client.sendInteractionEmbed(successMessage('Stopped playback!', author.guild.me.displayColor), interaction.id, interaction.token);
       } else {
+        if(!disabledCommand(msg.author)) return
         if(!msg.guild.me.voice.channelID) return msg.reply({ embeds: [ errorMessage('I am not playing anything!') ] });
         if(!msg.guild.me.voice.connection.dispatcher) return msg.reply({ embeds: [ errorMessage('I am not playing anything!') ] });
         if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return msg.reply({ embeds: [ errorMessage('You are not in my voice channel!') ] });
@@ -1546,6 +1558,7 @@ let execute = async (msg, args, interaction) => {
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m pause command.');
       if(interaction) {
         let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        if(!disabledCommand(author)) return
         if(!author.guild.me.voice.channelID) return client.sendInteractionEmbed(errorMessage('I am not playing anything!'), interaction.id, interaction.token);
         if(!author.guild.me.voice.connection.dispatcher) return client.sendInteractionEmbed(errorMessage('I am not playing anything!'), interaction.id, interaction.token);
         if(author.voice.channelID !== author.guild.me.voice.channelID) return client.sendInteractionEmbed(errorMessage('You are not in my voice channel!'), interaction.id, interaction.token);
@@ -1558,6 +1571,7 @@ let execute = async (msg, args, interaction) => {
           client.sendInteractionEmbed(successMessage('Paused playback!', author.guild.me.displayColor), interaction.id, interaction.token);
         }
       } else {
+        if(!disabledCommand(msg.author)) return
         if(!msg.guild.me.voice.channelID) return msg.reply({ embeds: [ errorMessage('I am not playing anything!') ] });
         if(!msg.guild.me.voice.connection.dispatcher) return msg.reply({ embeds: [ errorMessage('I am not playing anything!') ] });
         if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return msg.reply({ embeds: [ errorMessage('You are not in my voice channel!') ] });
@@ -1569,6 +1583,7 @@ let execute = async (msg, args, interaction) => {
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m disconnect command.');
       if(interaction) {
         let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        if(!disabledCommand(author)) return
         if(!author.guild.me.voice.channelID) return client.sendInteractionEmbed(errorMessage('I am not in a voice channel!'), interaction.id, interaction.token);
         if(author.voice.channelID !== author.guild.me.voice.channelID) return client.sendInteractionEmbed(errorMessage('You are not in my voice channel!'), interaction.id, interaction.token);
         if(author.voice.selfDeaf || author.voice.deaf) return client.sendInteractionEmbed(errorMessage('You cannot do this while deafened!'), interaction.id, interaction.token);
@@ -1577,6 +1592,7 @@ let execute = async (msg, args, interaction) => {
           client.sendInteractionEmbed(successMessage('I left your voice channel!', author.guild.me.displayColor), interaction.id, interaction.token);
         }
       } else {
+        if(!disabledCommand(msg.author)) return
         if(!msg.guild.me.voice.channelID) return msg.reply({ embeds: [ errorMessage('I am not in a voice channel!') ] });
         if(msg.member.voice.channelID !== msg.guild.me.voice.channelID) return msg.reply({ embeds: [ errorMessage('You are not in my voice channel!') ] });
         if(msg.member.voice.selfDeaf || msg.member.voice.deaf) return msg.reply({ embeds: [ errorMessage('You cannot do this while deafened!') ] });
@@ -1590,6 +1606,7 @@ let execute = async (msg, args, interaction) => {
       if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m join command.');
       if(interaction) {
         let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
+        if(!disabledCommand(author)) return
         if(!author.guild.me.voice.channelID) {
           if(!author.voice.channelID) return client.sendInteractionEmbed(errorMessage('You are not in a voice channel!'), interaction.id, interaction.token);
           await author.voice.channel.join() .then(con => {
@@ -1600,6 +1617,7 @@ let execute = async (msg, args, interaction) => {
           })
         } else client.sendInteractionEmbed(errorMessage('I am already in a voice channel!'), interaction.id, interaction.token);
       } else {
+        if(!disabledCommand(msg.author)) return
         if(!msg.guild.me.voice.channelID) {
           if(!msg.member.voice.channelID) return msg.reply({ embeds: [ errorMessage('You are not in a voice channel!') ] });
           await msg.member.voice.channel.join() .then(con => {
