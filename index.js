@@ -1996,6 +1996,18 @@ function initSlashCommands(guild) {
       ]
     }
   });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "join",
+      description: "Join voice channel.",
+    }
+  });
+  client.api.applications(client.user.id).guilds(guild.id).commands.post({
+    data: {
+      name: "nowplaying",
+      description: "Show now playing song."
+    }
+  });
 }
 
 client.ws.on('INTERACTION_CREATE', i => {
