@@ -1595,8 +1595,9 @@ let execute = async (msg, args, interaction) => {
             conMap[author.guild.id] = con;
             con.voice.setDeaf(true);
             con.on('disconnect', () => musicBotAPI.handleDisconnect(con));
+            client.sendInteractionEmbed(successMessage('Joined your voice channel!', author.guild.me.displayColor), interaction.id, interaction.token);
           })
-        } else msg.reply({ embed: errorMessage('I am already in a voice channel!') });
+        } else client.sendInteractionEmbed(errorMessage('I am already in a voice channel!'), interaction.id, interaction.token);
       } else {
         if(!msg.guild.me.voice.channelID) {
           if(!msg.member.voice.channelID) return msg.reply({ embed: errorMessage('You are not in a voice channel!') });
@@ -1604,8 +1605,9 @@ let execute = async (msg, args, interaction) => {
             conMap[msg.guild.id] = con;
             con.voice.setDeaf(true);
             con.on('disconnect', () => musicBotAPI.handleDisconnect(con));
+            msg.reply({ embed: successMessage('Joined your voice channel!', msg.guild.me.displayColor) });
           });
-        } else client.sendInteractionEmbed(errorMessage('I am already in a voice channel!'), interaction.id, interaction.token);
+        } else msg.reply({ embed: errorMessage('I am already in a voice channel!') });
       }
       break;
     case 'nowplaying':
