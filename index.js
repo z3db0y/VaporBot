@@ -1439,7 +1439,7 @@ let execute = async (msg, args, interaction) => {
         let author = client.guilds.resolve(interaction.guild_id).members.resolve(interaction.member.user.id);
         if(!author.guild.me.voice.channelID) {
           if(!author.voice.channelID) return client.sendInteractionEmbed(errorMessage('You are not in a voice channel!'), interaction.id, interaction.token);
-          await author.voice.channel.join() .then(con => {
+          author.voice.channel.join() .then(con => {
             conMap[author.guild.id] = con;
             con.voice.setDeaf(true);
             con.on('disconnect', () => musicBotAPI.handleDisconnect(con));
