@@ -161,12 +161,12 @@ let musicBotAPI = new class MusicBot {
   terminateAll() {
     for(let i in conMap) {
       let con = conMap[i];
-      if(con.channel) con.channel.leave();
+      con.channel.leave();
     }
   }
 
   handleDisconnect(c) {
-    if(conMap[c.channel.guild.id]) conMap[c.channel.guild.id] = null;
+    if(conMap[c.channel.guild.id]) delete conMap[c.channel.guild.id]
     this.resetQ(c);
   }
 }
