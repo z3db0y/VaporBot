@@ -70,6 +70,7 @@ let musicBotAPI = new class MusicBot {
         if(moi.token) client.editInteraction( successMessage('Now playing: ' + info.videoDetails.title, connection.channel.guild.me.displayColor), moi.id, moi.token );
         else moi.reply({ embed: successMessage('Now playing: ' + info.videoDetails.title, moi.guild.me.displayColor) });
       }) .catch(err => {
+        if(debugging) console.log('\x1b[31m[DEBUG]\x1b[0m ' + err.stack);
         if(moi.token) client.editInteraction( errorMessage('Unable to play song.'), moi.id, moi.token );
         else moi.reply({ embed: errorMessage('Unable to play song.') });
       });
