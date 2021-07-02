@@ -16,7 +16,6 @@
     "dotenv": "^8.2.0",
     "ffmpeg": "0.0.4",
     "fluent-ffmpeg": "^2.1.2",
-    "node-opus": "^0.3.3",
     "npm": "^7.7.5",
     "opus": "0.0.0",
     "opusscript": "0.0.7",
