@@ -161,7 +161,7 @@ let musicBotAPI = new class MusicBot {
   terminateAll() {
     for(let i in conMap) {
       let con = conMap[i];
-      con.channel.leave();
+      if(con.channel) con.channel.leave();
     }
   }
 
